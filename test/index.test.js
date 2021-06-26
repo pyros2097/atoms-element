@@ -1,5 +1,5 @@
 import { expect, test, jest } from '@jest/globals'
-import { number, boolean, string, array, object } from '../src/index.js';
+import { html, render, number, boolean, string, array, object } from '../src/index.js';
 
 const logMock = jest.fn();
 window.logError = logMock;
@@ -121,3 +121,18 @@ test('array', () => {
   array(schema).validate(context, [{ street: '123' }, { street: false }]);
   expectError(`'items[1].street' Expected type 'string' got type 'boolean'`);
 });
+
+test('render', async () => {
+  const data = { name: '123', address: { street: '1' } }
+  const template = html`
+    <div>
+      <app-counter name="123" details=${data}></app-counter>
+    </div>
+  `;
+  const res = await render(template);
+  expect(res).toEqual(`
+    <div>
+      <app-counter name=\"123\" details=\"{'name':'123','address':{'street':'1'}}\"></app-counter>
+    </div>
+  `);
+})

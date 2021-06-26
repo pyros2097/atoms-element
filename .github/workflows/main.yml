@@ -1,26 +1,11 @@
-name: CI
+name: Tests
 on: [push]
 jobs:
   build:
-    name: Test ${{ matrix.node }} and ${{ matrix.os }}
-
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        node: ['14.x']
-        os: [ubuntu-latest, windows-latest, macOS-latest]
-
     steps:
-      - name: Checkout repo
-        uses: actions/checkout@v2
-
-      - name: Use Node ${{ matrix.node }}
-        uses: actions/setup-node@v1
+      - uses: actions/checkout@v2
+      - uses: actions/setup-node@v1
         with:
-          node-version: ${{ matrix.node }}
-
-      - name: Install
-        uses: bahmutov/npm-install@v1
-
-      - name: Test
-        run: npm test
+          node-version: 14.x
+      - uses: bahmutov/npm-install@v1
+      - run: npm test

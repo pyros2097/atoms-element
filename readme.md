@@ -1,6 +1,7 @@
 # atoms-element
 
 [![Version](https://img.shields.io/npm/v/atoms-element?style=flat-square&color=blue)](https://www.npmjs.com/package/atoms-element)
+![Test](https://github.com/pyros2097/atoms-element/actions/workflows/main.yml/badge.svg)
 
 A simple web component library for defining your custom elements. It works on both client and server. It supports hooks and follows the same
 principles of react. Props are attributes on the custom element by default so its easier to debug.
