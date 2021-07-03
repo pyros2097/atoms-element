@@ -1,10 +1,24 @@
-import { expect, test, jest } from '@jest/globals'
-import { html, render, number, boolean, string, array, object } from '../src/index.js';
+import { expect, test, jest } from '@jest/globals';
+import {
+  html,
+  render,
+  number,
+  boolean,
+  string,
+  array,
+  object,
+  setLogError,
+  defineElement,
+  getElement,
+  useConfig,
+  useLocation,
+  useState,
+} from '../src/index.js';
 
 const logMock = jest.fn();
-window.logError = logMock;
+setLogError(logMock);
 
-const expectError = (msg) => expect(logMock).toHaveBeenCalledWith(msg);
+const expectError = msg => expect(logMock).toHaveBeenCalledWith(msg);
 
 const primitives = [
   {
@@ -24,12 +38,12 @@ const primitives = [
     validator: string,
     valid: ['', '123'],
     invalid: [123, false, {}, [], new Date()],
-  }
-]
+  },
+];
 
 primitives.forEach(value =>
   it(`${value.type}`, () => {
-    const context = 'key'
+    const context = 'key';
     expect(value.validator.type).toEqual(value.type);
     expect(value.validator.isRequired.type).toEqual(value.type);
     value.validator.validate(context);
@@ -41,7 +55,7 @@ primitives.forEach(value =>
     expectError(`'key' Field is required`);
     for (const v of value.invalid) {
       value.validator.validate(context, v);
-      expectError(`'key' Expected type '${value.type}' got type '${typeof v}'`)
+      expectError(`'key' Expected type '${value.type}' got type '${typeof v}'`);
     }
   })
 );
@@ -57,8 +71,8 @@ test('object', () => {
   const schema = object({
     address: object({
       street: string,
-    })
-  })
+    }),
+  });
   schema.validate(context, {});
   schema.validate(context, '123');
   expectError(`'data' Expected object literal '{}' got 'string'`);
@@ -84,8 +98,8 @@ test('object', () => {
   const schema2 = object({
     address: object({
       street: string.isRequired,
-    })
-  })
+    }),
+  });
   schema2.validate(context, {});
   schema2.validate(context, {
     address: {
@@ -96,7 +110,7 @@ test('object', () => {
     address: {},
   });
   expectError(`'data.address.street' Field is required`);
-})
+});
 
 test('array', () => {
   const context = 'items';
@@ -109,7 +123,7 @@ test('array', () => {
 
   const schema = object({
     street: string.isRequired,
-  })
+  });
   array(schema).validate(context, []);
   array(schema).validate(context, [{ street: '123' }, { street: '456' }, { street: '789' }]);
   array(schema).validate(context, [{}]);
@@ -123,7 +137,7 @@ test('array', () => {
 });
 
 test('render', async () => {
-  const data = { name: '123', address: { street: '1' } }
+  const data = { name: '123', address: { street: '1' } };
   const template = html`
     <div>
       <app-counter name="123" details=${data}></app-counter>
@@ -135,4 +149,43 @@ test('render', async () => {
       <app-counter name=\"123\" details=\"{'name':'123','address':{'street':'1'}}\"></app-counter>
     </div>
   `);
-})
+});
+
+test('defineElement', async () => {
+  const attrTypes = {
+    address: object({
+      street: string.isRequired,
+    }).isRequired,
+  };
+  const AppItem = ({ address: { street } }) => {
+    const [count] = useState(0);
+    return html`
+      <div>
+        <p>street: ${street}</p>
+        <p>count: ${count}</p>
+      </div>
+    `;
+  };
+  defineElement('app-item', AppItem, attrTypes);
+  const Clazz = getElement('app-item');
+  const instance = new Clazz([{ name: 'address', value: JSON.stringify({ street: '123' }).replace(/"/g, `'`) }]);
+  const res = await instance.render();
+  expect(res).toEqual(`
+      <div>
+        <p>street: 123</p>
+        <p>count: 0</p>
+      </div>
+    `);
+});
+
+test('useConfig', async () => {
+  expect(useConfig()).toBe(undefined);
+  global.config = {};
+  expect(useConfig()).toMatchObject({});
+});
+
+test('useLocation', async () => {
+  expect(useLocation()).toBe(undefined);
+  global.location = {};
+  expect(useLocation()).toMatchObject({});
+});
