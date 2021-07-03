@@ -21,14 +21,17 @@ npm i atoms-element
 ## Usage
 
 ```js
-import { defineElement, html, render, number } from 'atoms-element.js';
+import { defineElement, html, render, object, number, string } from 'atoms-element';
 
 const propTypes = {
   name: string.isRequired,
+  meta: object({
+    start: number,
+  }),
 };
 
-const Counter = ({ name }) => {
-  const [count, setCount] = useState(0);
+const Counter = ({ name, meta }) => {
+  const [count, setCount] = useState(meta?.start || 0);
 
   return html`
     <div>
@@ -46,5 +49,5 @@ const Counter = ({ name }) => {
 
 defineElement('app-counter', Counter, propTypes);
 
-render(html`<app-counter name="1"></app-counter>`, document.body);
+console.log(render(html`<app-counter name="1"></app-counter>`));
 ```

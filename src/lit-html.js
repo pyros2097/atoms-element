@@ -52,12 +52,14 @@ const directives = new WeakMap();
  *   }
  * });
  */
-const directive = (f) => ((...args) => {
-  const d = f(...args);
-  directives.set(d, true);
-  return d;
-});
-const isDirective = (o) => {
+const directive =
+  f =>
+  (...args) => {
+    const d = f(...args);
+    directives.set(d, true);
+    return d;
+  };
+const isDirective = o => {
   return typeof o === 'function' && directives.has(o);
 };
 
@@ -77,10 +79,7 @@ const isDirective = (o) => {
 /**
  * True if the custom elements polyfill is in use.
  */
-const isCEPolyfill = typeof window !== 'undefined' &&
-  window.customElements != null &&
-  window.customElements.polyfillWrapFlushCallback !==
-  undefined;
+const isCEPolyfill = typeof window !== 'undefined' && window.customElements != null && window.customElements.polyfillWrapFlushCallback !== undefined;
 /**
  * Reparents nodes, starting from `start` (inclusive) to `end` (exclusive),
  * into another container (could be the same container), before `before`. If
@@ -173,7 +172,10 @@ class Template {
     let lastPartIndex = 0;
     let index = -1;
     let partIndex = 0;
-    const { strings, values: { length } } = result;
+    const {
+      strings,
+      values: { length },
+    } = result;
     while (partIndex < length) {
       const node = walker.nextNode();
       if (node === null) {
@@ -223,8 +225,7 @@ class Template {
           stack.push(node);
           walker.currentNode = node.content;
         }
-      }
-      else if (node.nodeType === 3 /* Node.TEXT_NODE */) {
+      } else if (node.nodeType === 3 /* Node.TEXT_NODE */) {
         const data = node.data;
         if (data.indexOf(marker) >= 0) {
           const parent = node.parentNode;
@@ -237,12 +238,10 @@ class Template {
             let s = strings[i];
             if (s === '') {
               insert = createMarker();
-            }
-            else {
+            } else {
               const match = lastAttributeNameRegex.exec(s);
               if (match !== null && endsWith(match[2], boundAttributeSuffix)) {
-                s = s.slice(0, match.index) + match[1] +
-                  match[2].slice(0, -boundAttributeSuffix.length) + match[3];
+                s = s.slice(0, match.index) + match[1] + match[2].slice(0, -boundAttributeSuffix.length) + match[3];
               }
               insert = document.createTextNode(s);
             }
@@ -254,15 +253,13 @@ class Template {
           if (strings[lastIndex] === '') {
             parent.insertBefore(createMarker(), node);
             nodesToRemove.push(node);
-          }
-          else {
+          } else {
             node.data = strings[lastIndex];
           }
           // We have a part for each match found
           partIndex += lastIndex;
         }
-      }
-      else if (node.nodeType === 8 /* Node.COMMENT_NODE */) {
+      } else if (node.nodeType === 8 /* Node.COMMENT_NODE */) {
         if (node.data === marker) {
           const parent = node.parentNode;
           // Add a new marker node to be the startNode of the Part if any of
@@ -279,14 +276,12 @@ class Template {
           // Else, we can remove it to save future costs.
           if (node.nextSibling === null) {
             node.data = '';
-          }
-          else {
+          } else {
             nodesToRemove.push(node);
             index--;
           }
           partIndex++;
-        }
-        else {
+        } else {
           let i = -1;
           while ((i = node.data.indexOf(marker, i + 1)) !== -1) {
             // Comment node has a binding marker inside, make an inactive part
@@ -309,7 +304,7 @@ const endsWith = (str, suffix) => {
   const index = str.length - suffix.length;
   return index >= 0 && str.slice(index) === suffix;
 };
-const isTemplatePartActive = (part) => part.index !== -1;
+const isTemplatePartActive = part => part.index !== -1;
 // Allows `document.createComment('')` to be renamed for a
 // small manual size-savings.
 const createMarker = () => document.createComment('');
@@ -419,9 +414,7 @@ class TemplateInstance {
     // The Custom Elements v1 polyfill supports upgrade(), so the order when
     // polyfilled is the more ideal: Clone, Process, Adopt, Upgrade, Update,
     // Connect.
-    const fragment = isCEPolyfill ?
-      this.template.element.content.cloneNode(true) :
-      document.importNode(this.template.element.content, true);
+    const fragment = isCEPolyfill ? this.template.element.content.cloneNode(true) : document.importNode(this.template.element.content, true);
     const stack = [];
     const parts = this.template.parts;
     // Edge needs all 4 parameters present; IE11 needs 3rd parameter to be null
@@ -461,8 +454,7 @@ class TemplateInstance {
         const part = this.processor.handleTextExpression(this.options);
         part.insertAfterNode(node.previousSibling);
         this.__parts.push(part);
-      }
-      else {
+      } else {
         this.__parts.push(...this.processor.handleAttributeExpressions(node, part.name, part.strings, this.options));
       }
       partIndex++;
@@ -496,8 +488,7 @@ class TemplateInstance {
  * before any untrusted expressions have been mixed in. Therefor it is
  * considered safe by construction.
  */
-const policy = window.trustedTypes &&
-  trustedTypes.createPolicy('lit-html', { createHTML: (s) => s });
+const policy = typeof window !== 'undefined' && window.trustedTypes && trustedTypes.createPolicy('lit-html', { createHTML: s => s });
 const commentMarker = ` ${marker} `;
 /**
  * The return type of `html`, which holds a Template and the values from
@@ -540,8 +531,7 @@ class TemplateResult {
       // We're in comment position if we have a comment open with no following
       // comment close. Because <-- can appear in an attribute value there can
       // be false positives.
-      isCommentBinding = (commentOpen > -1 || isCommentBinding) &&
-        s.indexOf('-->', commentOpen + 1) === -1;
+      isCommentBinding = (commentOpen > -1 || isCommentBinding) && s.indexOf('-->', commentOpen + 1) === -1;
       // Check to see if we have an attribute-like sequence preceding the
       // expression. This can match "name=value" like structures in text,
       // comments, and attribute values, so there can be false-positives.
@@ -553,14 +543,11 @@ class TemplateResult {
         // <!-- foo=${'bar'}--> are handled correctly in the attribute branch
         // below.
         html += s + (isCommentBinding ? commentMarker : nodeMarker);
-      }
-      else {
+      } else {
         // For attributes we use just a marker sentinel, and also append a
         // $lit$ suffix to the name to opt-out of attribute-specific parsing
         // that IE and Edge do for style and certain SVG attributes.
-        html += s.substr(0, attributeMatch.index) + attributeMatch[1] +
-          attributeMatch[2] + boundAttributeSuffix + attributeMatch[3] +
-          marker;
+        html += s.substr(0, attributeMatch.index) + attributeMatch[1] + attributeMatch[2] + boundAttributeSuffix + attributeMatch[3] + marker;
       }
     }
     html += this.strings[l];
@@ -614,14 +601,15 @@ class SVGTemplateResult extends TemplateResult {
  * subject to an additional IP rights grant found at
  * http://polymer.github.io/PATENTS.txt
  */
-const isPrimitive = (value) => {
-  return (value === null ||
-    !(typeof value === 'object' || typeof value === 'function'));
+const isPrimitive = value => {
+  return value === null || !(typeof value === 'object' || typeof value === 'function');
 };
-const isIterable = (value) => {
-  return Array.isArray(value) ||
+const isIterable = value => {
+  return (
+    Array.isArray(value) ||
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    !!(value && value[Symbol.iterator]);
+    !!(value && value[Symbol.iterator])
+  );
 };
 /**
  * Writes attribute values to the DOM for a group of AttributeParts bound to a
@@ -679,8 +667,7 @@ class AttributeCommitter {
         const v = part.value;
         if (isPrimitive(v) || !isIterable(v)) {
           text += typeof v === 'string' ? v : String(v);
-        }
-        else {
+        } else {
           for (const t of v) {
             text += typeof t === 'string' ? t : String(t);
           }
@@ -772,8 +759,8 @@ class NodePart {
    * This part must be empty, as its contents are not automatically moved.
    */
   appendIntoPart(part) {
-    part.__insert(this.startNode = createMarker());
-    part.__insert(this.endNode = createMarker());
+    part.__insert((this.startNode = createMarker()));
+    part.__insert((this.endNode = createMarker()));
   }
   /**
    * Inserts this part after the `ref` part.
@@ -781,7 +768,7 @@ class NodePart {
    * This part must be empty, as its contents are not automatically moved.
    */
   insertAfterPart(ref) {
-    ref.__insert(this.startNode = createMarker());
+    ref.__insert((this.startNode = createMarker()));
     this.endNode = ref.endNode;
     ref.endNode = this.startNode;
   }
@@ -805,21 +792,16 @@ class NodePart {
       if (value !== this.value) {
         this.__commitText(value);
       }
-    }
-    else if (value instanceof TemplateResult) {
+    } else if (value instanceof TemplateResult) {
       this.__commitTemplateResult(value);
-    }
-    else if (value instanceof Node) {
+    } else if (value instanceof Node) {
       this.__commitNode(value);
-    }
-    else if (isIterable(value)) {
+    } else if (isIterable(value)) {
       this.__commitIterable(value);
-    }
-    else if (value === nothing) {
+    } else if (value === nothing) {
       this.value = nothing;
       this.clear();
-    }
-    else {
+    } else {
       // Fallback, will render the string representation
       this.__commitText(value);
     }
@@ -841,25 +823,21 @@ class NodePart {
     // If `value` isn't already a string, we explicitly convert it here in case
     // it can't be implicitly converted - i.e. it's a symbol.
     const valueAsString = typeof value === 'string' ? value : String(value);
-    if (node === this.endNode.previousSibling &&
-      node.nodeType === 3 /* Node.TEXT_NODE */) {
+    if (node === this.endNode.previousSibling && node.nodeType === 3 /* Node.TEXT_NODE */) {
       // If we only have a single text node between the markers, we can just
       // set its value, rather than replacing it.
       // TODO(justinfagnani): Can we just check if this.value is primitive?
       node.data = valueAsString;
-    }
-    else {
+    } else {
       this.__commitNode(document.createTextNode(valueAsString));
     }
     this.value = value;
   }
   __commitTemplateResult(value) {
     const template = this.options.templateFactory(value);
-    if (this.value instanceof TemplateInstance &&
-      this.value.template === template) {
+    if (this.value instanceof TemplateInstance && this.value.template === template) {
       this.value.update(value.values);
-    }
-    else {
+    } else {
       // Make sure we propagate the template processor from the TemplateResult
       // so that we use its syntax extension, etc. The template factory comes
       // from the render function options so that it can control template
@@ -899,8 +877,7 @@ class NodePart {
         itemParts.push(itemPart);
         if (partIndex === 0) {
           itemPart.appendIntoPart(this);
-        }
-        else {
+        } else {
           itemPart.insertAfterPart(itemParts[partIndex - 1]);
         }
       }
@@ -952,8 +929,7 @@ class BooleanAttributePart {
     if (this.value !== value) {
       if (value) {
         this.element.setAttribute(this.name, '');
-      }
-      else {
+      } else {
         this.element.removeAttribute(this.name);
       }
       this.value = value;
@@ -973,8 +949,7 @@ class BooleanAttributePart {
 class PropertyCommitter extends AttributeCommitter {
   constructor(element, name, strings) {
     super(element, name, strings);
-    this.single =
-      (strings.length === 2 && strings[0] === '' && strings[1] === '');
+    this.single = strings.length === 2 && strings[0] === '' && strings[1] === '';
   }
   _createPart() {
     return new PropertyPart(this);
@@ -993,8 +968,7 @@ class PropertyCommitter extends AttributeCommitter {
     }
   }
 }
-class PropertyPart extends AttributePart {
-}
+class PropertyPart extends AttributePart {}
 // Detect event listener options support. If the `capture` property is read
 // from the options object, then options are supported. If not, then the third
 // argument to add/removeEventListener is interpreted as the boolean capture
@@ -1008,14 +982,13 @@ let eventOptionsSupported = false;
       get capture() {
         eventOptionsSupported = true;
         return false;
-      }
+      },
     };
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     window.addEventListener('test', options, options);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     window.removeEventListener('test', options, options);
-  }
-  catch (_e) {
+  } catch (_e) {
     // event options not supported
   }
 })();
@@ -1026,7 +999,7 @@ class EventPart {
     this.element = element;
     this.eventName = eventName;
     this.eventContext = eventContext;
-    this.__boundHandleEvent = (e) => this.handleEvent(e);
+    this.__boundHandleEvent = e => this.handleEvent(e);
   }
   setValue(value) {
     this.__pendingValue = value;
@@ -1042,11 +1015,10 @@ class EventPart {
     }
     const newListener = this.__pendingValue;
     const oldListener = this.value;
-    const shouldRemoveListener = newListener == null ||
-      oldListener != null &&
-      (newListener.capture !== oldListener.capture ||
-        newListener.once !== oldListener.once ||
-        newListener.passive !== oldListener.passive);
+    const shouldRemoveListener =
+      newListener == null ||
+      (oldListener != null &&
+        (newListener.capture !== oldListener.capture || newListener.once !== oldListener.once || newListener.passive !== oldListener.passive));
     const shouldAddListener = newListener != null && (oldListener == null || shouldRemoveListener);
     if (shouldRemoveListener) {
       this.element.removeEventListener(this.eventName, this.__boundHandleEvent, this.__options);
@@ -1061,8 +1033,7 @@ class EventPart {
   handleEvent(event) {
     if (typeof this.value === 'function') {
       this.value.call(this.eventContext || this.element, event);
-    }
-    else {
+    } else {
       this.value.handleEvent(event);
     }
   }
@@ -1070,10 +1041,7 @@ class EventPart {
 // We copy options because of the inconsistent behavior of browsers when reading
 // the third argument of add/removeEventListener. IE11 doesn't support options
 // at all. Chrome 41 only reads `capture` if the argument is an object.
-const getOptions = (o) => o &&
-  (eventOptionsSupported ?
-    { capture: o.capture, passive: o.passive, once: o.once } :
-    o.capture);
+const getOptions = o => o && (eventOptionsSupported ? { capture: o.capture, passive: o.passive, once: o.once } : o.capture);
 
 /**
  * @license
@@ -1148,7 +1116,7 @@ function templateFactory(result) {
   if (templateCache === undefined) {
     templateCache = {
       stringsArray: new WeakMap(),
-      keyString: new Map()
+      keyString: new Map(),
     };
     templateCaches.set(result.type, templateCache);
   }
@@ -1206,7 +1174,7 @@ const render = (result, container, options) => {
   let part = parts.get(container);
   if (part === undefined) {
     removeNodes(container, container.firstChild);
-    parts.set(container, part = new NodePart(Object.assign({ templateFactory }, options)));
+    parts.set(container, (part = new NodePart(Object.assign({ templateFactory }, options))));
     part.appendInto(container);
   }
   part.setValue(result);
@@ -1243,4 +1211,34 @@ const html = (strings, ...values) => new TemplateResult(strings, values, 'html',
  */
 const svg = (strings, ...values) => new SVGTemplateResult(strings, values, 'svg', defaultTemplateProcessor);
 
-export { AttributeCommitter, AttributePart, BooleanAttributePart, DefaultTemplateProcessor, EventPart, NodePart, PropertyCommitter, PropertyPart, SVGTemplateResult, Template, TemplateInstance, TemplateResult, createMarker, defaultTemplateProcessor, directive, html, isDirective, isIterable, isPrimitive, isTemplatePartActive, noChange, nothing, parts, removeNodes, render, reparentNodes, svg, templateCaches, templateFactory };
+export {
+  AttributeCommitter,
+  AttributePart,
+  BooleanAttributePart,
+  DefaultTemplateProcessor,
+  EventPart,
+  NodePart,
+  PropertyCommitter,
+  PropertyPart,
+  SVGTemplateResult,
+  Template,
+  TemplateInstance,
+  TemplateResult,
+  createMarker,
+  defaultTemplateProcessor,
+  directive,
+  html,
+  isDirective,
+  isIterable,
+  isPrimitive,
+  isTemplatePartActive,
+  noChange,
+  nothing,
+  parts,
+  removeNodes,
+  render,
+  reparentNodes,
+  svg,
+  templateCaches,
+  templateFactory,
+};
