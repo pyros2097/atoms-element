@@ -1,100 +1,124 @@
-import { html as litHtml, render as litRender, directive as litDirective, NodePart, AttributePart, PropertyPart, isPrimitive } from './lit-html.js';
-import { html as litServerHtml, directive as litServerDirective, isNodePart, isAttributePart, unsafePrefixString, renderToString } from './lit-html-server.js';
+import { html, render as litRender, directive, NodePart, AttributePart, PropertyPart, isPrimitive } from './lit-html.js';
 
 const registry = {};
 const isBrowser = typeof window !== 'undefined';
-export const html = isBrowser ? litHtml : litServerHtml;
-export const render = isBrowser ? litRender : renderToString;
-export const directive = isBrowser ? litDirective : litServerDirective;
+export { html, isBrowser };
+
+export const render = isBrowser
+  ? litRender
+  : (template) => {
+      let js = '';
+      template.strings.forEach((text, i) => {
+        const value = template.values[i];
+        // TODO: remove @click @mouseleave= .handleClick props
+        // either here or in lit-html
+        // console.log('text', text);
+        const type = typeof value;
+        js += text;
+        if (value === null || !(type === 'object' || type === 'function' || type === 'undefined')) {
+          js += type !== 'string' ? String(value) : value;
+        } else if (Array.isArray(value)) {
+          // Array of TemplateResult
+          value.forEach((v) => {
+            js += render(v);
+          });
+        } else if (type === 'object') {
+          // TemplateResult
+          if (value.strings && value.type === 'html') {
+            js += render(value);
+          } else {
+            js += JSON.stringify(value).replace(/"/g, `'`);
+          }
+        } else if (type == 'function') {
+          js += value();
+        } else if (type !== 'undefined') {
+          js += value.toString();
+        } else {
+          // console.log('value', value);
+        }
+      });
+      return js;
+    };
 
 const previousValues = new WeakMap();
-export const unsafeHTML = directive(value => part => {
-  if (isBrowser) {
-    if (!(part instanceof NodePart)) {
-      throw new Error('unsafeHTML can only be used in text bindings');
-    }
-    const previousValue = previousValues.get(part);
-    if (previousValue !== undefined && isPrimitive(value) && value === previousValue.value && part.value === previousValue.fragment) {
-      return;
-    }
-    const template = document.createElement('template');
-    template.innerHTML = value; // innerHTML casts to string internally
-    const fragment = document.importNode(template.content, true);
-    part.setValue(fragment);
-    previousValues.set(part, { value, fragment });
-  } else {
-    if (!isNodePart(part)) {
-      throw Error('The `unsafeHTML` directive can only be used in text nodes');
-    }
-    part.setValue(`${unsafePrefixString}${value}`);
-  }
-});
+export const unsafeHTML = isBrowser
+  ? directive((value) => (part) => {
+      if (!(part instanceof NodePart)) {
+        throw new Error('unsafeHTML can only be used in text bindings');
+      }
+      const previousValue = previousValues.get(part);
+      if (previousValue !== undefined && isPrimitive(value) && value === previousValue.value && part.value === previousValue.fragment) {
+        return;
+      }
+      const template = document.createElement('template');
+      template.innerHTML = value; // innerHTML casts to string internally
+      const fragment = document.importNode(template.content, true);
+      part.setValue(fragment);
+      previousValues.set(part, { value, fragment });
+    })
+  : (value) => value;
 
 const previousClassesCache = new WeakMap();
-export const classMap = directive(classInfo => part => {
-  if (isBrowser) {
-    if (!(part instanceof AttributePart) || part instanceof PropertyPart || part.committer.name !== 'class' || part.committer.parts.length > 1) {
-      throw new Error('The `classMap` directive must be used in the `class` attribute ' + 'and must be the only part in the attribute.');
-    }
-    const { committer } = part;
-    const { element } = committer;
-    let previousClasses = previousClassesCache.get(part);
-    if (previousClasses === undefined) {
-      // Write static classes once
-      // Use setAttribute() because className isn't a string on SVG elements
-      element.setAttribute('class', committer.strings.join(' '));
-      previousClassesCache.set(part, (previousClasses = new Set()));
-    }
-    const classList = element.classList;
-    // Remove old classes that no longer apply
-    // We use forEach() instead of for-of so that re don't require down-level
-    // iteration.
-    previousClasses.forEach(name => {
-      if (!(name in classInfo)) {
-        classList.remove(name);
-        previousClasses.delete(name);
+export const classMap = isBrowser
+  ? directive((classInfo) => (part) => {
+      if (!(part instanceof AttributePart) || part instanceof PropertyPart || part.committer.name !== 'class' || part.committer.parts.length > 1) {
+        throw new Error('The `classMap` directive must be used in the `class` attribute ' + 'and must be the only part in the attribute.');
       }
-    });
-    // Add or remove classes based on their classMap value
-    for (const name in classInfo) {
-      const value = classInfo[name];
-      if (value != previousClasses.has(name)) {
-        // We explicitly want a loose truthy check of `value` because it seems
-        // more convenient that '' and 0 are skipped.
-        if (value) {
-          classList.add(name);
-          previousClasses.add(name);
-        } else {
+      const { committer } = part;
+      const { element } = committer;
+      let previousClasses = previousClassesCache.get(part);
+      if (previousClasses === undefined) {
+        // Write static classes once
+        // Use setAttribute() because className isn't a string on SVG elements
+        element.setAttribute('class', committer.strings.join(' '));
+        previousClassesCache.set(part, (previousClasses = new Set()));
+      }
+      const classList = element.classList;
+      // Remove old classes that no longer apply
+      // We use forEach() instead of for-of so that re don't require down-level
+      // iteration.
+      previousClasses.forEach((name) => {
+        if (!(name in classInfo)) {
           classList.remove(name);
           previousClasses.delete(name);
         }
+      });
+      // Add or remove classes based on their classMap value
+      for (const name in classInfo) {
+        const value = classInfo[name];
+        if (value != previousClasses.has(name)) {
+          // We explicitly want a loose truthy check of `value` because it seems
+          // more convenient that '' and 0 are skipped.
+          if (value) {
+            classList.add(name);
+            previousClasses.add(name);
+          } else {
+            classList.remove(name);
+            previousClasses.delete(name);
+          }
+        }
       }
-    }
-    if (typeof classList.commit === 'function') {
-      classList.commit();
-    }
-  } else {
-    if (!isAttributePart(part) || part.name !== 'class') {
-      throw Error('The `classMap` directive can only be used in the `class` attribute');
-    }
-    const classes = classInfo;
-    let value = '';
-    for (const key in classes) {
-      if (classes[key]) {
-        value += `${value.length ? ' ' : ''}${key}`;
+      if (typeof classList.commit === 'function') {
+        classList.commit();
       }
-    }
-    part.setValue(value);
-  }
-});
+    })
+  : (classes) => {
+      let value = '';
+      for (const key in classes) {
+        if (classes[key]) {
+          value += `${value.length ? ' ' : ''}${key}`;
+        }
+      }
+      return value;
+    };
 
 let currentCursor;
 let currentComponent;
-let logError = msg => {
+let logError = (msg) => {
   console.warn(msg);
 };
 
-export const setLogError = fn => {
+export const setLogError = (fn) => {
   logError = fn;
 };
 
@@ -104,10 +128,10 @@ const checkRequired = (context, data) => {
   }
 };
 
-const checkPrimitive = primitiveType => {
+const checkPrimitive = (primitiveType) => {
   const common = {
     type: primitiveType,
-    parse: attr => attr,
+    parse: (attr) => attr,
   };
   const validate = (context, data) => {
     if (data === null || typeof data === 'undefined') {
@@ -134,9 +158,9 @@ const checkPrimitive = primitiveType => {
 const checkComplex = (complexType, validate) => {
   const common = {
     type: complexType,
-    parse: attr => (attr ? JSON.parse(attr.replace(/'/g, `"`)) : null),
+    parse: (attr) => (attr ? JSON.parse(attr.replace(/'/g, `"`)) : null),
   };
-  return innerType => {
+  return (innerType) => {
     return {
       ...common,
       validate: (context, data) => {
@@ -180,7 +204,7 @@ export const array = checkComplex('array', (innerType, context, data) => {
 });
 export const func = checkComplex('function', (innerType, context, data) => {});
 
-export const hooks = config => {
+export const hooks = (config) => {
   const h = currentComponent.hooks;
   const c = currentComponent;
   const index = currentCursor++;
@@ -193,20 +217,20 @@ export const hooks = config => {
   return h.values[index];
 };
 
-export const __setCurrent__ = c => {
+export const __setCurrent__ = (c) => {
   currentComponent = c;
   currentCursor = 0;
 };
 
-export const useDispatchEvent = name =>
+export const useDispatchEvent = (name) =>
   hooks({
-    oncreate: (_, c) => data => c.dispatchEvent(new CustomEvent(name, data)),
+    oncreate: (_, c) => (data) => c.dispatchEvent(new CustomEvent(name, data)),
   });
-export const useRef = initialValue =>
+export const useRef = (initialValue) =>
   hooks({
     oncreate: (_h, _c) => ({ current: initialValue }),
   });
-export const useState = initialState =>
+export const useState = (initialState) =>
   hooks({
     oncreate: (h, c, i) => [
       typeof initialState === 'function' ? initialState() : initialState,
@@ -287,14 +311,14 @@ const batch = (runner, pick, callback) => {
     while ((p = pick(q))) callback(p);
   };
   const run = runner(flush);
-  return c => q.push(c) === 1 && run();
+  return (c) => q.push(c) === 1 && run();
 };
-const fifo = q => q.shift();
-const filo = q => q.pop();
-const microtask = flush => {
+const fifo = (q) => q.shift();
+const filo = (q) => q.pop();
+const microtask = (flush) => {
   return () => queueMicrotask(flush);
 };
-const task = flush => {
+const task = (flush) => {
   if (isBrowser) {
     const ch = new window.MessageChannel();
     ch.port1.onmessage = flush;
@@ -303,9 +327,9 @@ const task = flush => {
     return () => setImmediate(flush);
   }
 };
-const enqueueLayoutEffects = batch(microtask, filo, c => c._flushEffects('layoutEffects'));
-const enqueueEffects = batch(task, filo, c => c._flushEffects('effects'));
-const enqueueUpdate = batch(microtask, fifo, c => c._performUpdate());
+const enqueueLayoutEffects = batch(microtask, filo, (c) => c._flushEffects('layoutEffects'));
+const enqueueEffects = batch(task, filo, (c) => c._flushEffects('effects'));
+const enqueueUpdate = batch(microtask, fifo, (c) => c._performUpdate());
 
 const BaseElement = isBrowser ? window.HTMLElement : class {};
 
@@ -392,7 +416,7 @@ export class AtomsElement extends BaseElement {
 
   render() {
     if (isBrowser) {
-      this.funcKeys.forEach(key => {
+      this.funcKeys.forEach((key) => {
         this.props[key] = this[key];
       });
       render(this.renderer(this.props), this);
@@ -402,41 +426,46 @@ export class AtomsElement extends BaseElement {
     }
   }
 }
-export const getElement = name => registry[name];
+export const getElement = (name) => registry[name];
 
 export function defineElement(name, fn, attrTypes = {}) {
   const keys = Object.keys(attrTypes);
-  registry[name] = class extends AtomsElement {
-    constructor(attrs) {
-      super();
-      this.name = name;
-      this.renderer = fn;
-      this.attrTypes = attrTypes;
-      this.funcKeys = keys.filter(key => attrTypes[key].type === 'function');
-      this.attrTypesMap = keys
-        .filter(key => attrTypes[key].type !== 'function')
-        .reduce((acc, key) => {
-          acc[key.toLowerCase()] = {
-            propName: key,
-            propType: attrTypes[key],
-          };
-          return acc;
-        }, {});
-      if (attrs) {
-        attrs.forEach(item => {
-          this.attributeChangedCallback(item.name, null, item.value);
-        });
+  registry[name] = {
+    fn,
+    attrTypes,
+    clazz: class extends AtomsElement {
+      constructor(attrs) {
+        super();
+        this.name = name;
+        this.renderer = fn;
+        this.attrTypes = attrTypes;
+        this.funcKeys = keys.filter((key) => attrTypes[key].type === 'function');
+        this.attrTypesMap = keys
+          .filter((key) => attrTypes[key].type !== 'function')
+          .reduce((acc, key) => {
+            acc[key.toLowerCase()] = {
+              propName: key,
+              propType: attrTypes[key],
+            };
+            return acc;
+          }, {});
+        if (attrs) {
+          attrs.forEach((item) => {
+            this.attributeChangedCallback(item.name, null, item.value);
+          });
+        }
       }
-    }
 
-    static get observedAttributes() {
-      return keys;
-    }
+      static get observedAttributes() {
+        return keys;
+      }
+    },
   };
   if (isBrowser) {
     if (window.customElements.get(name)) {
       return;
+    } else {
+      window.customElements.define(name, registry[name].clazz);
     }
-    window.customElements.define(name, registry[name]);
   }
 }
