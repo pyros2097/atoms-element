@@ -4,13 +4,13 @@
 ![Test](https://github.com/pyros2097/atoms-element/actions/workflows/main.yml/badge.svg)
 
 A simple web component library for defining your custom elements. It works on both client and server. It supports hooks and follows the same
-principles of react. Props are attributes on the custom element by default so its easier to debug.
+principles of react. Data props are attributes on the custom element by default so its easier to debug and functions/handlers are
+methods attached to the element.
 
 It uses slightly modified versions of these libraries,
 
-1. [lit-html](https://github.com/lit/lit) on the client
-2. [lit-html-server](https://github.com/popeindustries/lit-html-server) on the server
-3. [fuco](https://github.com/wtnbass/fuco)
+1. [lit-html](https://github.com/lit/lit)
+2. [fuco](https://github.com/wtnbass/fuco)
 
 ## Installation
 

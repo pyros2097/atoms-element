@@ -53,13 +53,13 @@ const directives = new WeakMap();
  * });
  */
 const directive =
-  f =>
+  (f) =>
   (...args) => {
     const d = f(...args);
     directives.set(d, true);
     return d;
   };
-const isDirective = o => {
+const isDirective = (o) => {
   return typeof o === 'function' && directives.has(o);
 };
 
@@ -304,7 +304,7 @@ const endsWith = (str, suffix) => {
   const index = str.length - suffix.length;
   return index >= 0 && str.slice(index) === suffix;
 };
-const isTemplatePartActive = part => part.index !== -1;
+const isTemplatePartActive = (part) => part.index !== -1;
 // Allows `document.createComment('')` to be renamed for a
 // small manual size-savings.
 const createMarker = () => document.createComment('');
@@ -488,7 +488,7 @@ class TemplateInstance {
  * before any untrusted expressions have been mixed in. Therefor it is
  * considered safe by construction.
  */
-const policy = typeof window !== 'undefined' && window.trustedTypes && trustedTypes.createPolicy('lit-html', { createHTML: s => s });
+const policy = typeof window !== 'undefined' && window.trustedTypes && trustedTypes.createPolicy('lit-html', { createHTML: (s) => s });
 const commentMarker = ` ${marker} `;
 /**
  * The return type of `html`, which holds a Template and the values from
@@ -601,10 +601,10 @@ class SVGTemplateResult extends TemplateResult {
  * subject to an additional IP rights grant found at
  * http://polymer.github.io/PATENTS.txt
  */
-const isPrimitive = value => {
+const isPrimitive = (value) => {
   return value === null || !(typeof value === 'object' || typeof value === 'function');
 };
-const isIterable = value => {
+const isIterable = (value) => {
   return (
     Array.isArray(value) ||
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -999,7 +999,7 @@ class EventPart {
     this.element = element;
     this.eventName = eventName;
     this.eventContext = eventContext;
-    this.__boundHandleEvent = e => this.handleEvent(e);
+    this.__boundHandleEvent = (e) => this.handleEvent(e);
   }
   setValue(value) {
     this.__pendingValue = value;
@@ -1041,7 +1041,7 @@ class EventPart {
 // We copy options because of the inconsistent behavior of browsers when reading
 // the third argument of add/removeEventListener. IE11 doesn't support options
 // at all. Chrome 41 only reads `capture` if the argument is an object.
-const getOptions = o => o && (eventOptionsSupported ? { capture: o.capture, passive: o.passive, once: o.once } : o.capture);
+const getOptions = (o) => o && (eventOptionsSupported ? { capture: o.capture, passive: o.passive, once: o.once } : o.capture);
 
 /**
  * @license

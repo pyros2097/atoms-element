@@ -18,7 +18,7 @@ import {
 const logMock = jest.fn();
 setLogError(logMock);
 
-const expectError = msg => expect(logMock).toHaveBeenCalledWith(msg);
+const expectError = (msg) => expect(logMock).toHaveBeenCalledWith(msg);
 
 const primitives = [
   {
@@ -41,7 +41,7 @@ const primitives = [
   },
 ];
 
-primitives.forEach(value =>
+primitives.forEach((value) =>
   it(`${value.type}`, () => {
     const context = 'key';
     expect(value.validator.type).toEqual(value.type);
@@ -57,7 +57,7 @@ primitives.forEach(value =>
       value.validator.validate(context, v);
       expectError(`'key' Expected type '${value.type}' got type '${typeof v}'`);
     }
-  })
+  }),
 );
 
 test('object', () => {
@@ -136,11 +136,23 @@ test('array', () => {
   expectError(`'items[1].street' Expected type 'string' got type 'boolean'`);
 });
 
+test('useConfig', async () => {
+  expect(useConfig()).toBe(undefined);
+  global.config = {};
+  expect(useConfig()).toMatchObject({});
+});
+
+test('useLocation', async () => {
+  expect(useLocation()).toBe(undefined);
+  global.location = {};
+  expect(useLocation()).toMatchObject({});
+});
+
 test('render', async () => {
   const data = { name: '123', address: { street: '1' } };
   const template = html`
     <div>
-      <app-counter name="123" details=${data}></app-counter>
+      <app-counter name="123" details="${data}"></app-counter>
     </div>
   `;
   const res = await render(template);
@@ -149,6 +161,20 @@ test('render', async () => {
       <app-counter name=\"123\" details=\"{'name':'123','address':{'street':'1'}}\"></app-counter>
     </div>
   `);
+});
+
+test('render single template', async () => {
+  const template = html` <div>${html`NoCountry ${false}`}</div> `;
+  const res = await render(template);
+  expect(res).toEqual(` <div>NoCountry false</div> `);
+});
+
+test('render multu template', async () => {
+  const template = html` <div>${[1, 2].map((v) => html` <app-item meta="${{ index: v }}" @click=${() => {}} .handleClick=${() => {}}></app-item>`)}</div> `;
+  const res = await render(template);
+  expect(res).toEqual(
+    ` <div> <app-item meta="{'index':1}" @click=undefined .handleClick=undefined></app-item> <app-item meta="{'index':2}" @click=undefined .handleClick=undefined></app-item></div> `,
+  );
 });
 
 test('defineElement', async () => {
@@ -167,8 +193,8 @@ test('defineElement', async () => {
     `;
   };
   defineElement('app-item', AppItem, attrTypes);
-  const Clazz = getElement('app-item');
-  const instance = new Clazz([{ name: 'address', value: JSON.stringify({ street: '123' }).replace(/"/g, `'`) }]);
+  const { clazz } = getElement('app-item');
+  const instance = new clazz([{ name: 'address', value: JSON.stringify({ street: '123' }).replace(/"/g, `'`) }]);
   const res = await instance.render();
   expect(res).toEqual(`
       <div>
@@ -176,16 +202,4 @@ test('defineElement', async () => {
         <p>count: 0</p>
       </div>
     `);
-});
-
-test('useConfig', async () => {
-  expect(useConfig()).toBe(undefined);
-  global.config = {};
-  expect(useConfig()).toMatchObject({});
-});
-
-test('useLocation', async () => {
-  expect(useLocation()).toBe(undefined);
-  global.location = {};
-  expect(useLocation()).toMatchObject({});
 });
