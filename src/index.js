@@ -483,7 +483,7 @@ export function defineElement(name, fn, attrTypes = {}) {
       }
 
       static get observedAttributes() {
-        return keys;
+        return keys.map((k) => k.toLowerCase());
       }
     },
   };
