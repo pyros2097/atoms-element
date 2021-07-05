@@ -1,4 +1,4 @@
-import { html, render as litRender, directive, NodePart, AttributePart, PropertyPart, isPrimitive, Template } from './lit-html.js';
+import { html, render as litRender, directive, NodePart, AttributePart, PropertyPart, isPrimitive } from './lit-html.js';
 
 const registry = {};
 const isBrowser = typeof window !== 'undefined';
@@ -459,7 +459,7 @@ export function defineElement(name, fn, attrTypes = {}) {
   registry[name] = {
     fn,
     attrTypes,
-    clazz: class extends AtomsElement {
+    Clazz: class extends AtomsElement {
       constructor(attrs) {
         super();
         this.name = name;
@@ -491,7 +491,7 @@ export function defineElement(name, fn, attrTypes = {}) {
     if (window.customElements.get(name)) {
       return;
     } else {
-      window.customElements.define(name, registry[name].clazz);
+      window.customElements.define(name, registry[name].Clazz);
     }
   }
 }
