@@ -169,12 +169,10 @@ test('render single template', async () => {
   expect(res).toEqual(` <div>NoCountry false</div> `);
 });
 
-test('render multu template', async () => {
+test('render multi template', async () => {
   const template = html` <div>${[1, 2].map((v) => html` <app-item meta="${{ index: v }}" @click=${() => {}} .handleClick=${() => {}}></app-item>`)}</div> `;
   const res = await render(template);
-  expect(res).toEqual(
-    ` <div> <app-item meta="{'index':1}" @click=undefined .handleClick=undefined></app-item> <app-item meta="{'index':2}" @click=undefined .handleClick=undefined></app-item></div> `,
-  );
+  expect(res).toEqual(` <div> <app-item meta="{'index':1}"></app-item> <app-item meta="{'index':2}"></app-item></div> `);
 });
 
 test('defineElement', async () => {
