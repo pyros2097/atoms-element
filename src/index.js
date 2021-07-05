@@ -5,8 +5,20 @@ const isBrowser = typeof window !== 'undefined';
 export { html, isBrowser };
 
 const lastAttributeNameRegex =
-  // eslint-disable-next-line no-control-regex
   /([ \x09\x0a\x0c\x0d])([^\0-\x1F\x7F-\x9F "'>=/]+)([ \x09\x0a\x0c\x0d]*=[ \x09\x0a\x0c\x0d]*(?:[^ \x09\x0a\x0c\x0d"'`<>=]*|"[^"]*|'[^']*))$/;
+
+const wrapAttribute = (attrName, suffix, text, v) => {
+  let buffer = text;
+  const hasQuote = suffix && suffix.includes(`="`);
+  if (attrName && !hasQuote) {
+    buffer += `"`;
+  }
+  buffer += v;
+  if (attrName && !hasQuote) {
+    buffer += `"`;
+  }
+  return buffer;
+};
 
 export const render = isBrowser
   ? litRender
@@ -14,13 +26,15 @@ export const render = isBrowser
       let js = '';
       template.strings.forEach((text, i) => {
         const value = template.values[i];
-        // TODO: remove @click @mouseleave= .handleClick props
-        // either here or in lit-html
-        // console.log('text', text);
         const type = typeof value;
+        let attrName, suffix;
+        const matchName = lastAttributeNameRegex.exec(text);
+        if (matchName) {
+          attrName = matchName[2];
+          suffix = matchName[3];
+        }
         if (value === null || !(type === 'object' || type === 'function' || type === 'undefined')) {
-          js += text;
-          js += type !== 'string' ? String(value) : value;
+          js += wrapAttribute(attrName, suffix, text, type !== 'string' ? String(value) : value);
         } else if (Array.isArray(value)) {
           js += text;
           // Array of TemplateResult
@@ -28,21 +42,19 @@ export const render = isBrowser
             js += render(v);
           });
         } else if (type === 'object') {
-          js += text;
           // TemplateResult
           if (value.strings && value.type === 'html') {
+            js += text;
             js += render(value);
           } else {
-            js += JSON.stringify(value).replace(/"/g, `'`);
+            js += wrapAttribute(attrName, suffix, text, JSON.stringify(value).replace(/"/g, `'`));
           }
         } else if (type == 'function') {
-          const matchName = lastAttributeNameRegex.exec(text);
-          if (matchName) {
-            let [, prefix, name, suffix] = matchName;
-            js += text.replace(' ' + name + '=', '');
+          if (attrName) {
+            js += text.replace(' ' + attrName + '=', '');
           } else {
-            js += text;
-            js += value();
+            // js += text;
+            // js += value();
           }
         } else if (type !== 'undefined') {
           js += text;

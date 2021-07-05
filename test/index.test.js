@@ -13,6 +13,8 @@ import {
   useConfig,
   useLocation,
   useState,
+  unsafeHTML,
+  classMap,
 } from '../src/index.js';
 
 const logMock = jest.fn();
@@ -149,18 +151,58 @@ test('useLocation', async () => {
 });
 
 test('render', async () => {
+  const age = 1;
   const data = { name: '123', address: { street: '1' } };
+  const highlight = 'high';
   const template = html`
     <div>
-      <app-counter name="123" details="${data}"></app-counter>
+      <app-counter name="123" class="abc ${highlight}" age=${age} details1=${data}></app-counter>
     </div>
   `;
   const res = await render(template);
   expect(res).toEqual(`
     <div>
-      <app-counter name=\"123\" details=\"{'name':'123','address':{'street':'1'}}\"></app-counter>
+      <app-counter name="123" class="abc high" age="1" details1="{'name':'123','address':{'street':'1'}}"></app-counter>
     </div>
   `);
+});
+
+test('render attributes within quotes', async () => {
+  const age = 1;
+  const data = { name: '123', address: { street: '1' } };
+  const classes = 'high';
+  const template = html`
+    <div>
+      <app-counter name="123" class=${classes} age="${age}" details1="${data}"></app-counter>
+    </div>
+  `;
+  const res = await render(template);
+  expect(res).toEqual(`
+    <div>
+      <app-counter name="123" class="high" age="1" details1="{'name':'123','address':{'street':'1'}}"></app-counter>
+    </div>
+  `);
+});
+
+test('render unsafeHTML', async () => {
+  const textContent = `<div><p class="123">this is unsafe</p></div>`;
+  const template = html` <div>${unsafeHTML(textContent)}</div> `;
+  const res = await render(template);
+  expect(res).toEqual(` <div><div><p class="123">this is unsafe</p></div></div> `);
+});
+
+test('render classMap show', async () => {
+  const hide = false;
+  const template = html` <div class="abc ${classMap({ show: !hide })}"></div> `;
+  const res = await render(template);
+  expect(res).toEqual(` <div class="abc show"></div> `);
+});
+
+test('render classMap hide', async () => {
+  const hide = true;
+  const template = html` <div class="abc ${classMap({ show: !hide })}"></div> `;
+  const res = await render(template);
+  expect(res).toEqual(` <div class="abc "></div> `);
 });
 
 test('render single template', async () => {
