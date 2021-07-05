@@ -168,6 +168,20 @@ test('render', async () => {
   `);
 });
 
+test('render attribute keys', async () => {
+  const template = html`
+    <div>
+      <app-counter name="123" perPage="1"></app-counter>
+    </div>
+  `;
+  const res = await render(template);
+  expect(res).toEqual(`
+    <div>
+      <app-counter name="123" perPage="1"></app-counter>
+    </div>
+  `);
+});
+
 test('render attributes within quotes', async () => {
   const age = 1;
   const data = { name: '123', address: { street: '1' } };
@@ -221,14 +235,15 @@ test('render multi template', async () => {
 
 test('defineElement', async () => {
   const attrTypes = {
+    perPage: string.isRequired,
     address: object({
       street: string.isRequired,
     }).isRequired,
   };
-  const AppItem = ({ address: { street } }) => {
+  const AppItem = ({ perPage, address: { street } }) => {
     const [count] = useState(0);
     return html`
-      <div>
+      <div perPage=${perPage}>
         <p>street: ${street}</p>
         <p>count: ${count}</p>
       </div>
@@ -236,10 +251,14 @@ test('defineElement', async () => {
   };
   defineElement('app-item', AppItem, attrTypes);
   const { Clazz } = getElement('app-item');
-  const instance = new Clazz([{ name: 'address', value: JSON.stringify({ street: '123' }).replace(/"/g, `'`) }]);
+  const instance = new Clazz([
+    { name: 'address', value: JSON.stringify({ street: '123' }).replace(/"/g, `'`) },
+    { name: 'perpage', value: '1' },
+  ]);
+  expect(Clazz.observedAttributes).toEqual(['perpage', 'address']);
   const res = await instance.render();
   expect(res).toEqual(`
-      <div>
+      <div perPage="1">
         <p>street: 123</p>
         <p>count: 0</p>
       </div>
