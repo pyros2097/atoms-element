@@ -1,4 +1,4 @@
-import { html, render as litRender, directive, NodePart, AttributePart, PropertyPart, isPrimitive } from './lit-html.js';
+import { html, render as litRender, directive, NodePart, AttributePart, PropertyPart, isPrimitive, Template } from './lit-html.js';
 
 const registry = {};
 const isBrowser = typeof window !== 'undefined';
@@ -35,9 +35,8 @@ export const render = isBrowser
         }
         if (value === null || !(type === 'object' || type === 'function' || type === 'undefined')) {
           js += wrapAttribute(attrName, suffix, text, type !== 'string' ? String(value) : value);
-        } else if (Array.isArray(value)) {
+        } else if (Array.isArray(value) && value.find((item) => item && item.strings && item.type === 'html')) {
           js += text;
-          // Array of TemplateResult
           value.forEach((v) => {
             js += render(v);
           });

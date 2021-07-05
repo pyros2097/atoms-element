@@ -153,16 +153,17 @@ test('useLocation', async () => {
 test('render', async () => {
   const age = 1;
   const data = { name: '123', address: { street: '1' } };
+  const items = [1, 2, 3];
   const highlight = 'high';
   const template = html`
     <div>
-      <app-counter name="123" class="abc ${highlight}" age=${age} details1=${data}></app-counter>
+      <app-counter name="123" class="abc ${highlight}" age=${age} details1=${data} items=${items}></app-counter>
     </div>
   `;
   const res = await render(template);
   expect(res).toEqual(`
     <div>
-      <app-counter name="123" class="abc high" age="1" details1="{'name':'123','address':{'street':'1'}}"></app-counter>
+      <app-counter name="123" class="abc high" age="1" details1="{'name':'123','address':{'street':'1'}}" items="[1,2,3]"></app-counter>
     </div>
   `);
 });
@@ -170,16 +171,17 @@ test('render', async () => {
 test('render attributes within quotes', async () => {
   const age = 1;
   const data = { name: '123', address: { street: '1' } };
+  const items = [1, 2, 3];
   const classes = 'high';
   const template = html`
     <div>
-      <app-counter name="123" class=${classes} age="${age}" details1="${data}"></app-counter>
+      <app-counter name="123" class=${classes} age="${age}" details1="${data}" items="${items}"></app-counter>
     </div>
   `;
   const res = await render(template);
   expect(res).toEqual(`
     <div>
-      <app-counter name="123" class="high" age="1" details1="{'name':'123','address':{'street':'1'}}"></app-counter>
+      <app-counter name="123" class="high" age="1" details1="{'name':'123','address':{'street':'1'}}" items="[1,2,3]"></app-counter>
     </div>
   `);
 });
