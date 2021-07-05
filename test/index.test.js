@@ -235,8 +235,8 @@ test('defineElement', async () => {
     `;
   };
   defineElement('app-item', AppItem, attrTypes);
-  const { clazz } = getElement('app-item');
-  const instance = new clazz([{ name: 'address', value: JSON.stringify({ street: '123' }).replace(/"/g, `'`) }]);
+  const { Clazz } = getElement('app-item');
+  const instance = new Clazz([{ name: 'address', value: JSON.stringify({ street: '123' }).replace(/"/g, `'`) }]);
   const res = await instance.render();
   expect(res).toEqual(`
       <div>
