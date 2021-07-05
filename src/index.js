@@ -4,6 +4,10 @@ const registry = {};
 const isBrowser = typeof window !== 'undefined';
 export { html, isBrowser };
 
+const lastAttributeNameRegex =
+  // eslint-disable-next-line no-control-regex
+  /([ \x09\x0a\x0c\x0d])([^\0-\x1F\x7F-\x9F "'>=/]+)([ \x09\x0a\x0c\x0d]*=[ \x09\x0a\x0c\x0d]*(?:[^ \x09\x0a\x0c\x0d"'`<>=]*|"[^"]*|'[^']*))$/;
+
 export const render = isBrowser
   ? litRender
   : (template) => {
@@ -14,15 +18,17 @@ export const render = isBrowser
         // either here or in lit-html
         // console.log('text', text);
         const type = typeof value;
-        js += text;
         if (value === null || !(type === 'object' || type === 'function' || type === 'undefined')) {
+          js += text;
           js += type !== 'string' ? String(value) : value;
         } else if (Array.isArray(value)) {
+          js += text;
           // Array of TemplateResult
           value.forEach((v) => {
             js += render(v);
           });
         } else if (type === 'object') {
+          js += text;
           // TemplateResult
           if (value.strings && value.type === 'html') {
             js += render(value);
@@ -30,10 +36,19 @@ export const render = isBrowser
             js += JSON.stringify(value).replace(/"/g, `'`);
           }
         } else if (type == 'function') {
-          js += value();
+          const matchName = lastAttributeNameRegex.exec(text);
+          if (matchName) {
+            let [, prefix, name, suffix] = matchName;
+            js += text.replace(' ' + name + '=', '');
+          } else {
+            js += text;
+            js += value();
+          }
         } else if (type !== 'undefined') {
+          js += text;
           js += value.toString();
         } else {
+          js += text;
           // console.log('value', value);
         }
       });
