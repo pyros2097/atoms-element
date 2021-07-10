@@ -6,6 +6,7 @@ import {
   boolean,
   string,
   array,
+  func,
   object,
   setLogError,
   defineElement,
@@ -228,9 +229,31 @@ test('render single template', async () => {
 });
 
 test('render multi template', async () => {
-  const template = html` <div>${[1, 2].map((v) => html` <app-item meta="${{ index: v }}" @click=${() => {}} .handleClick=${() => {}}></app-item>`)}</div> `;
+  const template = html`
+    <div>
+      ${[1, 2].map(
+        (v) => html`
+          <app-item meta="${{ index: v }}" @click=${() => {}} .handleClick=${() => {}}>
+            <button @click=${() => {}}>+</button>
+          </app-item>
+        `,
+      )}
+    </div>
+  `;
   const res = await render(template);
-  expect(res).toEqual(` <div> <app-item meta="{'index':1}"></app-item> <app-item meta="{'index':2}"></app-item></div> `);
+  expect(res).toEqual(`
+    <div>
+      
+          <app-item meta="{'index':1}">
+            <button>+</button>
+          </app-item>
+        
+          <app-item meta="{'index':2}">
+            <button>+</button>
+          </app-item>
+        
+    </div>
+  `);
 });
 
 test('defineElement', async () => {
@@ -239,13 +262,15 @@ test('defineElement', async () => {
     address: object({
       street: string.isRequired,
     }).isRequired,
+    renderItem: func(),
   };
-  const AppItem = ({ perPage, address: { street } }) => {
+  const AppItem = ({ perPage, address: { street }, renderItem }) => {
     const [count] = useState(0);
     return html`
       <div perPage=${perPage}>
         <p>street: ${street}</p>
         <p>count: ${count}</p>
+        ${renderItem()}
       </div>
     `;
   };
@@ -255,12 +280,14 @@ test('defineElement', async () => {
     { name: 'address', value: JSON.stringify({ street: '123' }).replace(/"/g, `'`) },
     { name: 'perpage', value: '1' },
   ]);
-  expect(Clazz.observedAttributes).toEqual(['perpage', 'address']);
+  instance.renderItem = () => html`<div><p>render item 1</p></div>`;
+  expect(Clazz.observedAttributes).toEqual(['perpage', 'address', 'renderitem']);
   const res = await instance.render();
   expect(res).toEqual(`
       <div perPage="1">
         <p>street: 123</p>
         <p>count: 0</p>
+        <div><p>render item 1</p></div>
       </div>
     `);
 });
