@@ -1,27 +1,7 @@
 import { expect, test, jest } from '@jest/globals';
-import {
-  html,
-  render,
-  number,
-  boolean,
-  string,
-  array,
-  func,
-  object,
-  setLogError,
-  defineElement,
-  getElement,
-  useConfig,
-  useLocation,
-  useState,
-  unsafeHTML,
-  classMap,
-} from '../src/index.js';
+import { AtomsElement, html, render, number, boolean, string, array, func, object, unsafeHTML, classMap } from '../src/index.js';
 
-const logMock = jest.fn();
-setLogError(logMock);
-
-const expectError = (msg) => expect(logMock).toHaveBeenCalledWith(msg);
+global.__DEV = true;
 
 const primitives = [
   {
@@ -46,6 +26,7 @@ const primitives = [
 
 primitives.forEach((value) =>
   it(`${value.type}`, () => {
+    const spy = jest.spyOn(global.console, 'warn').mockImplementation();
     const context = 'key';
     expect(value.validator.type).toEqual(value.type);
     expect(value.validator.isRequired.type).toEqual(value.type);
@@ -55,21 +36,23 @@ primitives.forEach((value) =>
       value.validator.isRequired.validate(context, v);
     }
     value.validator.isRequired.validate(context);
-    expectError(`'key' Field is required`);
+    expect(console.warn).toHaveBeenCalledWith(`'key' Field is required`);
     for (const v of value.invalid) {
       value.validator.validate(context, v);
-      expectError(`'key' Expected type '${value.type}' got type '${typeof v}'`);
+      expect(console.warn).toHaveBeenCalledWith(`'key' Expected type '${value.type}' got type '${typeof v}'`);
     }
+    spy.mockRestore();
   }),
 );
 
 test('object', () => {
+  const spy = jest.spyOn(global.console, 'warn').mockImplementation();
   const context = 'data';
   object({}).validate(context, { name: '123' });
   object({ name: string }).validate(context, { name: '123' });
   object({ name: string.isRequired }).validate(context, { name: '' });
   object({ name: string.isRequired }).validate(context, {});
-  expectError(`'data.name' Field is required`);
+  expect(console.warn).toHaveBeenCalledWith(`'data.name' Field is required`);
 
   const schema = object({
     address: object({
@@ -78,14 +61,14 @@ test('object', () => {
   });
   schema.validate(context, {});
   schema.validate(context, '123');
-  expectError(`'data' Expected object literal '{}' got 'string'`);
+  expect(console.warn).toHaveBeenCalledWith(`'data' Expected object literal '{}' got 'string'`);
   schema.validate(context, {
     address: {},
   });
   schema.validate(context, {
     address: '123',
   });
-  expectError(`'data.address' Expected object literal '{}' got 'string'`);
+  expect(console.warn).toHaveBeenCalledWith(`'data.address' Expected object literal '{}' got 'string'`);
   schema.validate(context, {
     address: {
       street: 'avenue 1',
@@ -96,7 +79,7 @@ test('object', () => {
       street: false,
     },
   });
-  expectError(`'data.address.street' Expected type 'string' got type 'boolean'`);
+  expect(console.warn).toHaveBeenCalledWith(`'data.address.street' Expected type 'string' got type 'boolean'`);
 
   const schema2 = object({
     address: object({
@@ -112,17 +95,19 @@ test('object', () => {
   schema2.validate(context, {
     address: {},
   });
-  expectError(`'data.address.street' Field is required`);
+  expect(console.warn).toHaveBeenCalledWith(`'data.address.street' Field is required`);
+  spy.mockRestore();
 });
 
 test('array', () => {
+  const spy = jest.spyOn(global.console, 'warn').mockImplementation();
   const context = 'items';
   array(string).validate(context, ['123']);
   array(string).validate(context, [123]);
-  expectError(`'items[0]' Expected type 'string' got type 'number'`);
+  expect(console.warn).toHaveBeenCalledWith(`'items[0]' Expected type 'string' got type 'number'`);
   array(array(string)).validate(context, [['123']]);
   array(array(string)).validate(context, [[123]]);
-  expectError(`'items[0][0]' Expected type 'string' got type 'number'`);
+  expect(console.warn).toHaveBeenCalledWith(`'items[0][0]' Expected type 'string' got type 'number'`);
 
   const schema = object({
     street: string.isRequired,
@@ -130,25 +115,14 @@ test('array', () => {
   array(schema).validate(context, []);
   array(schema).validate(context, [{ street: '123' }, { street: '456' }, { street: '789' }]);
   array(schema).validate(context, [{}]);
-  expectError(`'items[0].street' Field is required`);
+  expect(console.warn).toHaveBeenCalledWith(`'items[0].street' Field is required`);
   array(schema).validate(context, [{ street: false }]);
-  expectError(`'items[0].street' Expected type 'string' got type 'boolean'`);
+  expect(console.warn).toHaveBeenCalledWith(`'items[0].street' Expected type 'string' got type 'boolean'`);
   array(schema).validate(context, [{ street: '123' }, {}]);
-  expectError(`'items[1].street' Field is required`);
+  expect(console.warn).toHaveBeenCalledWith(`'items[1].street' Field is required`);
   array(schema).validate(context, [{ street: '123' }, { street: false }]);
-  expectError(`'items[1].street' Expected type 'string' got type 'boolean'`);
-});
-
-test('useConfig', async () => {
-  expect(useConfig()).toBe(undefined);
-  global.config = {};
-  expect(useConfig()).toMatchObject({});
-});
-
-test('useLocation', async () => {
-  expect(useLocation()).toBe(undefined);
-  global.location = {};
-  expect(useLocation()).toMatchObject({});
+  expect(console.warn).toHaveBeenCalledWith(`'items[1].street' Expected type 'string' got type 'boolean'`);
+  spy.mockRestore();
 });
 
 test('render', async () => {
@@ -256,38 +230,50 @@ test('render multi template', async () => {
   `);
 });
 
-test('defineElement', async () => {
-  const attrTypes = {
-    perPage: string.isRequired,
-    address: object({
-      street: string.isRequired,
-    }).isRequired,
-    renderItem: func(),
-  };
-  const AppItem = ({ perPage, address: { street }, renderItem }) => {
-    const [count] = useState(0);
-    return html`
-      <div perPage=${perPage}>
-        <p>street: ${street}</p>
-        <p>count: ${count}</p>
-        ${renderItem()}
-      </div>
-    `;
-  };
-  defineElement('app-item', AppItem, attrTypes);
-  const { Clazz } = getElement('app-item');
-  const instance = new Clazz([
+test('AtomsElement', async () => {
+  class AppItem extends AtomsElement {
+    static name = 'app-item';
+
+    static attrTypes = {
+      perPage: string.isRequired,
+      address: object({
+        street: string.isRequired,
+      }).isRequired,
+      renderItem: func(),
+    };
+
+    static css = ``;
+
+    render() {
+      const {
+        perPage,
+        address: { street },
+      } = this.getAttrs();
+      const [count] = this.useState(0);
+      return html`
+        <div perPage=${perPage}>
+          <p>street: ${street}</p>
+          <p>count: ${count}</p>
+          ${this.renderItem()}
+        </div>
+      `;
+    }
+  }
+  AppItem.register();
+  const Clazz = AtomsElement.getElement('app-item');
+  expect(Clazz.name).toEqual(AppItem.name);
+  const instance = new AppItem([
     { name: 'address', value: JSON.stringify({ street: '123' }).replace(/"/g, `'`) },
     { name: 'perpage', value: '1' },
   ]);
   instance.renderItem = () => html`<div><p>render item 1</p></div>`;
-  expect(Clazz.observedAttributes).toEqual(['perpage', 'address', 'renderitem']);
-  const res = await instance.render();
+  expect(AppItem.observedAttributes).toEqual(['perpage', 'address']);
+  const res = await render(instance.render());
   expect(res).toEqual(`
-      <div perPage="1">
-        <p>street: 123</p>
-        <p>count: 0</p>
-        <div><p>render item 1</p></div>
-      </div>
-    `);
+        <div perPage="1">
+          <p>street: 123</p>
+          <p>count: 0</p>
+          <div><p>render item 1</p></div>
+        </div>
+      `);
 });

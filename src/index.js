@@ -1,6 +1,5 @@
 import { html, render as litRender, directive, NodePart, AttributePart, PropertyPart, isPrimitive } from './lit-html.js';
 
-const registry = {};
 const isBrowser = typeof window !== 'undefined';
 export { html, isBrowser };
 
@@ -138,14 +137,10 @@ export const classMap = isBrowser
       return value;
     };
 
-let currentCursor;
-let currentComponent;
-let logError = (msg) => {
-  console.warn(msg);
-};
-
-export const setLogError = (fn) => {
-  logError = fn;
+const logError = (msg) => {
+  if (isBrowser ? window.__DEV__ : global.__DEV) {
+    console.warn(msg);
+  }
 };
 
 const checkRequired = (context, data) => {
@@ -230,62 +225,20 @@ export const array = checkComplex('array', (innerType, context, data) => {
 });
 export const func = checkComplex('function', (innerType, context, data) => {});
 
-export const hooks = (config) => {
-  const h = currentComponent.hooks;
-  const c = currentComponent;
-  const index = currentCursor++;
-  if (h.values.length <= index && config.oncreate) {
-    h.values[index] = config.oncreate(h, c, index);
-  }
-  if (config.onupdate) {
-    h.values[index] = config.onupdate(h, c, index);
-  }
-  return h.values[index];
-};
-
-export const __setCurrent__ = (c) => {
-  currentComponent = c;
-  currentCursor = 0;
-};
-
-export const useDispatchEvent = (name) =>
-  hooks({
-    oncreate: (_, c) => (data) => c.dispatchEvent(new CustomEvent(name, data)),
-  });
-export const useRef = (initialValue) =>
-  hooks({
-    oncreate: (_h, _c) => ({ current: initialValue }),
-  });
-export const useState = (initialState) =>
-  hooks({
-    oncreate: (h, c, i) => [
-      typeof initialState === 'function' ? initialState() : initialState,
-      function setState(nextState) {
-        const state = h.values[i][0];
-        if (typeof nextState === 'function') {
-          nextState = nextState(state);
-        }
-        if (!Object.is(state, nextState)) {
-          h.values[i][0] = nextState;
-          c.update();
-        }
-      },
-    ],
-  });
-export const useReducer = (reducer, initialState) =>
-  hooks({
-    oncreate: (h, c, i) => [
-      initialState,
-      function dispatch(action) {
-        const state = h.values[i][0];
-        const nextState = reducer(state, action);
-        if (!Object.is(state, nextState)) {
-          h.values[i][0] = nextState;
-          c.update();
-        }
-      },
-    ],
-  });
+// export const useReducer = (reducer, initialState) =>
+//   hooks({
+//     oncreate: (h, c, i) => [
+//       initialState,
+//       function dispatch(action) {
+//         const state = h.values[i][0];
+//         const nextState = reducer(state, action);
+//         if (!Object.is(state, nextState)) {
+//           h.values[i][0] = nextState;
+//           c.update();
+//         }
+//       },
+//     ],
+//   });
 const depsChanged = (prev, next) => prev == null || next.some((f, i) => !Object.is(f, prev[i]));
 export const useEffect = (handler, deps) =>
   hooks({
@@ -296,39 +249,39 @@ export const useEffect = (handler, deps) =>
       }
     },
   });
-export const useLayoutEffect = (handler, deps) =>
-  hooks({
-    onupdate(h, _, i) {
-      if (!deps || depsChanged(h.deps[i], deps)) {
-        h.deps[i] = deps || [];
-        h.layoutEffects[i] = handler;
-      }
-    },
-  });
-export const useMemo = (fn, deps) =>
-  hooks({
-    onupdate(h, _, i) {
-      let value = h.values[i];
-      if (!deps || depsChanged(h.deps[i], deps)) {
-        h.deps[i] = deps || [];
-        value = fn();
-      }
-      return value;
-    },
-  });
-export const useCallback = (callback, deps) => useMemo(() => callback, deps);
-export const useConfig = () => {
-  if (isBrowser) {
-    return window.config;
-  }
-  return global.config;
-};
-export const useLocation = () => {
-  if (isBrowser) {
-    return window.location;
-  }
-  return global.location;
-};
+
+// createHooks(config) {
+//   const index = this.currentCursor++;
+//   if (this.hooks.values.length <= index && config.oncreate) {
+//     this.hooks.values[index] = config.oncreate(this.hooks, this, index);
+//   }
+//   if (config.onupdate) {
+//     this.hooks.values[index] = config.onupdate(this.hooks, this, index);
+//   }
+//   return this.hooks.values[index];
+// }
+//
+// export const useLayoutEffect = (handler, deps) =>
+//   hooks({
+//     onupdate(h, _, i) {
+//       if (!deps || depsChanged(h.deps[i], deps)) {
+//         h.deps[i] = deps || [];
+//         h.layoutEffects[i] = handler;
+//       }
+//     },
+//   });
+// export const useMemo = (fn, deps) =>
+//   hooks({
+//     onupdate(h, _, i) {
+//       let value = h.values[i];
+//       if (!deps || depsChanged(h.deps[i], deps)) {
+//         h.deps[i] = deps || [];
+//         value = fn();
+//       }
+//       return value;
+//     },
+//   });
+// export const useCallback = (callback, deps) => useMemo(() => callback, deps);
 
 const batch = (runner, pick, callback) => {
   const q = [];
@@ -358,33 +311,60 @@ const enqueueEffects = batch(task, filo, (c) => c._flushEffects('effects'));
 const enqueueUpdate = batch(microtask, fifo, (c) => c._performUpdate());
 
 const BaseElement = isBrowser ? window.HTMLElement : class {};
-
+const count = [0];
+const registry = {};
 export class AtomsElement extends BaseElement {
-  constructor() {
+  static register() {
+    registry[this.name] = this;
+    if (isBrowser) {
+      if (window.customElements.get(this.name)) {
+        return;
+      } else {
+        window.customElements.define(this.name, registry[this.name]);
+      }
+    }
+  }
+
+  static getElement(name) {
+    return registry[name];
+  }
+
+  static getNextIndex() {
+    count[0] = count[0] + 1;
+    return count[0];
+  }
+
+  static get observedAttributes() {
+    if (!this.attrTypes) {
+      return [];
+    }
+    return Object.keys(this.attrTypes)
+      .filter((key) => this.attrTypes[key].type !== 'function')
+      .map((k) => k.toLowerCase());
+  }
+
+  constructor(attrs) {
     super();
+    this._id = `atoms:${this.constructor.getNextIndex()}`;
     this._dirty = false;
     this._connected = false;
     this.hooks = {
+      currentCursor: 0,
       values: [],
       deps: [],
       effects: [],
       layoutEffects: [],
       cleanup: [],
     };
-    this.props = {};
-    this.attrTypes = {};
-    this.name = '';
-    this.renderer = () => {};
-    this.attrTypes = {};
-    this.funcKeys = [];
-    this.attrTypesMap = {};
+    this.attrs = attrs;
+    this.config = isBrowser ? window.config : global.config;
+    this.location = isBrowser ? window.location : global.location;
   }
+
   connectedCallback() {
     this._connected = true;
     if (isBrowser) {
       this.update();
-    } else {
-      __setCurrent__(this);
     }
   }
   disconnectedCallback() {
@@ -396,13 +376,6 @@ export class AtomsElement extends BaseElement {
   }
 
   attributeChangedCallback(key, oldValue, newValue) {
-    const attr = this.attrTypesMap[key];
-    if (!attr) {
-      return;
-    }
-    const data = attr.propType.parse(newValue);
-    attr.propType.validate(`<${this.name}> ${key}`, data);
-    this.props[attr.propName] = data;
     if (this._connected) {
       this.update();
     }
@@ -415,16 +388,18 @@ export class AtomsElement extends BaseElement {
     this._dirty = true;
     enqueueUpdate(this);
   }
+
   _performUpdate() {
     if (!this._connected) {
       return;
     }
-    __setCurrent__(this);
-    this.render();
+    this.hooks.currentCursor = 0;
+    render(this.render(), this);
     enqueueLayoutEffects(this);
     enqueueEffects(this);
     this._dirty = false;
   }
+
   _flushEffects(effectKey) {
     const effects = this.hooks[effectKey];
     const cleanups = this.hooks.cleanup;
@@ -440,58 +415,44 @@ export class AtomsElement extends BaseElement {
     }
   }
 
-  render() {
-    this.funcKeys.forEach((key) => {
-      this.props[key] = this[key];
-    });
-    if (isBrowser) {
-      render(this.renderer(this.props), this);
-    } else {
-      __setCurrent__(this);
-      return render(this.renderer(this.props), this);
+  useState(initialState) {
+    const index = this.hooks.currentCursor++;
+    if (this.hooks.values.length <= index) {
+      this.hooks.values[index] = [
+        typeof initialState === 'function' ? initialState() : initialState,
+        (nextState) => {
+          const state = this.hooks.values[index][0];
+          if (typeof nextState === 'function') {
+            nextState = nextState(state);
+          }
+          if (!Object.is(state, nextState)) {
+            this.hooks.values[index][0] = nextState;
+            this.update();
+          }
+        },
+      ];
     }
+    return this.hooks.values[index];
   }
-}
-export const getElement = (name) => registry[name];
 
-export function defineElement(name, fn, attrTypes = {}) {
-  const keys = Object.keys(attrTypes);
-  registry[name] = {
-    fn,
-    attrTypes,
-    Clazz: class extends AtomsElement {
-      constructor(attrs) {
-        super();
-        this.name = name;
-        this.renderer = fn;
-        this.attrTypes = attrTypes;
-        this.funcKeys = keys.filter((key) => attrTypes[key].type === 'function');
-        this.attrTypesMap = keys
-          .filter((key) => attrTypes[key].type !== 'function')
-          .reduce((acc, key) => {
-            acc[key.toLowerCase()] = {
-              propName: key,
-              propType: attrTypes[key],
-            };
-            return acc;
-          }, {});
-        if (attrs) {
-          attrs.forEach((item) => {
-            this.attributeChangedCallback(item.name, null, item.value);
-          });
-        }
-      }
-
-      static get observedAttributes() {
-        return keys.map((k) => k.toLowerCase());
-      }
-    },
-  };
-  if (isBrowser) {
-    if (window.customElements.get(name)) {
-      return;
-    } else {
-      window.customElements.define(name, registry[name].Clazz);
+  useRef() {
+    const index = this.currentCursor++;
+    if (this.hooks.values.length <= index) {
+      this.hooks.values[index] = { current: initialValue };
     }
+    return this.hooks.values[index];
+  }
+
+  getAttrs() {
+    return Object.keys(this.constructor.attrTypes)
+      .filter((key) => this.constructor.attrTypes[key].type !== 'function')
+      .reduceRight((acc, key) => {
+        const attrType = this.constructor.attrTypes[key];
+        const newValue = isBrowser ? this.getAttribute(key.toLowerCase()) : this.attrs.find((item) => item.name === key.toLowerCase()).value;
+        const data = attrType.parse(newValue);
+        attrType.validate(`<${this.constructor.name}> ${key}`, data);
+        acc[key] = data;
+        return acc;
+      }, {});
   }
 }
