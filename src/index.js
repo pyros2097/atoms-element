@@ -441,10 +441,10 @@ export class AtomsElement extends BaseElement {
   }
 
   render() {
+    this.funcKeys.forEach((key) => {
+      this.props[key] = this[key];
+    });
     if (isBrowser) {
-      this.funcKeys.forEach((key) => {
-        this.props[key] = this[key];
-      });
       render(this.renderer(this.props), this);
     } else {
       __setCurrent__(this);
