@@ -1,40 +1,28 @@
-import AtomsElement, { html, object, number, string } from '../element.js';
+import { html, css } from '../element.js';
 import Page from '../page.js';
+import './app-counter.js';
 
-class Counter extends AtomsElement {
-  static name = 'app-counter';
+class CounterPage extends Page {
+  route() {
+    return '/counter';
+  }
 
-  static attrTypes = {
-    name: string.isRequired,
-    meta: object({
-      start: number,
-    }),
-  };
+  styles() {
+    return css``;
+  }
 
-  static styles = `
-    .container {
-    }
-  `;
+  head({ config }) {
+    return html` <title>${config.title}</title> `;
+  }
 
-  render() {
-    const { name, meta } = this.getAttrs();
-    const [count, setCount] = this.useState(meta?.start || 0);
-
+  body() {
     return html`
       <div>
-        <div class="font-bold mb-2">Counter: ${name}</div>
-        <div class="flex flex-1 flex-row text-3xl text-gray-700">
-          <button @click=${() => setCount((v) => v - 1)}>-</button>
-          <div class="mx-20">
-            <h1 class="text-1xl">${count}</h1>
-          </div>
-          <button @click=${() => setCount((v) => v + 1)}>+</button>
-        </div>
+        <app-counter name="1"></app-counter>
       </div>
     `;
   }
 }
 
-Counter.register();
-
-console.log(ssr(html`<app-counter name="1"></app-counter>`));
+const counterPage = new CounterPage({ config: { lang: 'en', title: 'Counter App' } });
+console.log(counterPage.render());

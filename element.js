@@ -386,7 +386,7 @@ export default class AtomsElement extends BaseElement {
     return Object.keys(this.attrTypes).map((k) => k.toLowerCase());
   }
 
-  constructor(attrs) {
+  constructor(ssrAttributes) {
     super();
     this._dirty = false;
     this._connected = false;
@@ -398,7 +398,7 @@ export default class AtomsElement extends BaseElement {
       layoutEffects: [],
       cleanup: [],
     };
-    this.attrs = attrs;
+    this.ssrAttributes = ssrAttributes;
     this.config = isBrowser ? window.config : global.config;
     this.location = isBrowser ? window.location : global.location;
   }
@@ -477,18 +477,10 @@ export default class AtomsElement extends BaseElement {
     return this.hooks.values[index];
   }
 
-  useRef() {
-    const index = this.currentCursor++;
-    if (this.hooks.values.length <= index) {
-      this.hooks.values[index] = { current: initialValue };
-    }
-    return this.hooks.values[index];
-  }
-
-  getAttrs() {
+  get attrs() {
     return Object.keys(this.constructor.attrTypes).reduceRight((acc, key) => {
       const attrType = this.constructor.attrTypes[key];
-      const newValue = isBrowser ? this.getAttribute(key.toLowerCase()) : this.attrs.find((item) => item.name === key.toLowerCase())?.value;
+      const newValue = isBrowser ? this.getAttribute(key.toLowerCase()) : this.ssrAttributes.find((item) => item.name === key.toLowerCase())?.value;
       const data = attrType.parse(newValue);
       attrType.validate(`<${this.constructor.name}> ${key}`, data);
       acc[key] = data;

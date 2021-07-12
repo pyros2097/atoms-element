@@ -32,10 +32,13 @@ export declare type Location = {
 }
 
 export default class AtomsElement {
+  static register(): () => void;
+  static observedAttributes: Array<string>;
+  static getElement: (name: string) => AtomsElement | undefined;
   config: Config;
   location: Location;
-  styles(): string
-  getAttrs(): {[key: string]: any};
+  attrs: {[key: string]: any};
+  styles: () => string;
   useState: <S>(initialState: S | (() => S)) => [S, Dispatch<SetStateAction<S>>];
   useEffect: (effect: EffectCallback, deps?: DependencyList) => void;
   useLayoutEffect: (effect: EffectCallback, deps?: DependencyList) => void;
@@ -46,5 +49,4 @@ export default class AtomsElement {
   ) => [ReducerStateWithoutAction<R>, DispatchWithoutAction];
   useCallback: <T extends (...args: any[]) => any>(callback: T, deps: DependencyList) => T;
   useMemo: <T>(factory: () => T, deps: DependencyList | undefined) => T;
-  useRef: <T>(initialValue: T | null | undefined) => MutableRefObject<T>;
 }
