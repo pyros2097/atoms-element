@@ -20,12 +20,6 @@
     "fuco"
   ],
   "license": "MIT",
-  "main": "src/index.js",
-  "files": [
-    "src",
-    "example"
-  ],
-  "typings": "src/index.d.ts",
   "author": "pyros.sh",
   "type": "module",
   "engines": {
