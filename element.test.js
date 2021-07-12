@@ -253,7 +253,7 @@ test('AtomsElement', async () => {
       const {
         perPage,
         address: { street },
-      } = this.getAttrs();
+      } = this.attrs;
       const [count] = this.useState(0);
       return html`
         <div perPage=${perPage}>
