@@ -5,7 +5,7 @@ export { html, isBrowser };
 
 const constructionToken = Symbol();
 
-export class CSSResult {
+class CSSResult {
   constructor(cssText, safeToken) {
     if (safeToken !== constructionToken) {
       throw new Error('CSSResult is not constructable. Use `unsafeCSS` or `css` instead.');
@@ -52,6 +52,23 @@ export const css = (strings, ...values) => {
   const cssText = values.reduce((acc, v, idx) => acc + textFromCSSResult(v) + strings[idx + 1], strings[0]);
   return new CSSResult(cssText, constructionToken);
 };
+
+// const cssSymbol = Symbol();
+// const hasCSSSymbol = (value: unknown): value is HasCSSSymbol => {
+//   return value && (value as HasCSSSymbol)[cssSymbol] != null;
+// };
+// const resolve = (value: unknown): string => {
+//   if (typeof value === "number") return String(value);
+//   if (hasCSSSymbol(value)) return value[cssSymbol];
+//   throw new TypeError(`${value} is not supported type.`);
+// };
+// export const css = (strings: readonly string[], ...values: unknown[]) => ({
+//   [cssSymbol]: strings
+//     .slice(1)
+//     .reduce((acc, s, i) => acc + resolve(values[i]) + s, strings[0]),
+// });
+// export const unsafeCSS = (css: string) => ({ [cssSymbol]: css });
+// root.appendChild(document.createElement("style")).textContent = cssStyle;
 
 const lastAttributeNameRegex =
   /([ \x09\x0a\x0c\x0d])([^\0-\x1F\x7F-\x9F "'>=/]+)([ \x09\x0a\x0c\x0d]*=[ \x09\x0a\x0c\x0d]*(?:[^ \x09\x0a\x0c\x0d"'`<>=]*|"[^"]*|'[^']*))$/;
@@ -275,63 +292,7 @@ export const array = checkComplex('array', (innerType, context, data) => {
 });
 export const func = checkComplex('function', (innerType, context, data) => {});
 
-// export const useReducer = (reducer, initialState) =>
-//   hooks({
-//     oncreate: (h, c, i) => [
-//       initialState,
-//       function dispatch(action) {
-//         const state = h.values[i][0];
-//         const nextState = reducer(state, action);
-//         if (!Object.is(state, nextState)) {
-//           h.values[i][0] = nextState;
-//           c.update();
-//         }
-//       },
-//     ],
-//   });
 const depsChanged = (prev, next) => prev == null || next.some((f, i) => !Object.is(f, prev[i]));
-export const useEffect = (handler, deps) =>
-  hooks({
-    onupdate(h, _, i) {
-      if (!deps || depsChanged(h.deps[i], deps)) {
-        h.deps[i] = deps || [];
-        h.effects[i] = handler;
-      }
-    },
-  });
-
-// createHooks(config) {
-//   const index = this.currentCursor++;
-//   if (this.hooks.values.length <= index && config.oncreate) {
-//     this.hooks.values[index] = config.oncreate(this.hooks, this, index);
-//   }
-//   if (config.onupdate) {
-//     this.hooks.values[index] = config.onupdate(this.hooks, this, index);
-//   }
-//   return this.hooks.values[index];
-// }
-//
-// export const useLayoutEffect = (handler, deps) =>
-//   hooks({
-//     onupdate(h, _, i) {
-//       if (!deps || depsChanged(h.deps[i], deps)) {
-//         h.deps[i] = deps || [];
-//         h.layoutEffects[i] = handler;
-//       }
-//     },
-//   });
-// export const useMemo = (fn, deps) =>
-//   hooks({
-//     onupdate(h, _, i) {
-//       let value = h.values[i];
-//       if (!deps || depsChanged(h.deps[i], deps)) {
-//         h.deps[i] = deps || [];
-//         value = fn();
-//       }
-//       return value;
-//     },
-//   });
-// export const useCallback = (callback, deps) => useMemo(() => callback, deps);
 
 const batch = (runner, pick, callback) => {
   const q = [];
@@ -457,6 +418,17 @@ export default class AtomsElement extends BaseElement {
     }
   }
 
+  get attrs() {
+    return Object.keys(this.constructor.attrTypes).reduceRight((acc, key) => {
+      const attrType = this.constructor.attrTypes[key];
+      const newValue = isBrowser ? this.getAttribute(key.toLowerCase()) : this.ssrAttributes.find((item) => item.name === key.toLowerCase())?.value;
+      const data = attrType.parse(newValue);
+      attrType.validate(`<${this.constructor.name}> ${key}`, data);
+      acc[key] = data;
+      return acc;
+    }, {});
+  }
+
   useState(initialState) {
     const index = this.hooks.currentCursor++;
     if (this.hooks.values.length <= index) {
@@ -477,14 +449,85 @@ export default class AtomsElement extends BaseElement {
     return this.hooks.values[index];
   }
 
-  get attrs() {
-    return Object.keys(this.constructor.attrTypes).reduceRight((acc, key) => {
-      const attrType = this.constructor.attrTypes[key];
-      const newValue = isBrowser ? this.getAttribute(key.toLowerCase()) : this.ssrAttributes.find((item) => item.name === key.toLowerCase())?.value;
-      const data = attrType.parse(newValue);
-      attrType.validate(`<${this.constructor.name}> ${key}`, data);
-      acc[key] = data;
-      return acc;
-    }, {});
+  useReducer(reducer, initialState) {
+    const index = this.hooks.currentCursor++;
+    if (this.hooks.values.length <= index) {
+      this.hooks.values[index] = [
+        initialState,
+        (action) => {
+          const state = this.hooks.values[index][0];
+          const nextState = reducer(state, action);
+          if (!Object.is(state, nextState)) {
+            this.hooks.values[index][0] = nextState;
+            this.update();
+          }
+        },
+      ];
+    }
+    return this.hooks.values[index];
   }
+
+  useEffect(handler, deps) {
+    const index = this.hooks.currentCursor++;
+    if (!deps || depsChanged(this.hooks.deps[index], deps)) {
+      this.hooks.deps[index] = deps || [];
+      this.hooks.effects[index] = handler;
+    }
+  }
+
+  useLayoutEffect(handler, deps) {
+    const index = this.hooks.currentCursor++;
+    if (!deps || depsChanged(this.hooks.deps[index], deps)) {
+      this.hooks.deps[index] = deps || [];
+      this.hooks.layoutEffects[index] = handler;
+    }
+  }
+
+  useMemo(fn, deps) {
+    const index = this.hooks.currentCursor++;
+    if (!deps || depsChanged(this.hooks.deps[index], deps)) {
+      this.hooks.deps[index] = deps || [];
+      this.hooks.values[i] = fn();
+    }
+    return this.hooks.values[i];
+  }
+
+  useCallback(callback, deps) {
+    return this.useMemo(() => callback, deps);
+  }
+
+  //   export const useDispatchEvent = <T>(name: string, eventInit: EventInit = {}) =>
+  //   hooks<(detail: T) => void>({
+  //     _onmount: (_, c) => (detail: T) =>
+  //       c._dispatch(name, { ...eventInit, detail }),
+  //   });
+
+  // export const useListenEvent = <T extends Event>(
+  //   name: string,
+  //   listener: Listener<T>
+  // ) =>
+  //   hooks<void>({
+  //     _onmount(h, c, i) {
+  //       h._cleanup[i] = c._listen(name, listener);
+  //     },
+  //   });
+
+  // useErrorBoundary() {
+  //   const [error, setError] = this.useState(null);
+  //   useListenEvent(errorType, (e) => {
+  //     setError(e.detail);
+  //   });
+  //   return [error, () => setError(null)];
+  // }
+
+  // public _dispatch<T>(name: string, init: CustomEventInit<T>) {
+  //         this.dispatchEvent(new CustomEvent<T>(name, init));
+  //       }
+
+  //       public _listen<T extends Event>(name: string, listener: Listener<T>) {
+  //         this.addEventListener(name, listener as EventListener);
+  //         return () => {
+  //           this.removeEventListener(name, listener as EventListener);
+  //         };
+  //       }
 }
