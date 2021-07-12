@@ -4,12 +4,12 @@ import Page from './page.js';
 
 test('Page', () => {
   class MainPage extends Page {
-    route({ config }) {
-      const langPart = config.lang === 'en' ? '' : `/${config.lang}`;
+    route() {
+      const langPart = this.config.lang === 'en' ? '' : `/${this.config.lang}`;
       return `${langPart}`;
     }
 
-    styles({ config }) {
+    styles() {
       return css`
         div {
           color: red;
@@ -17,20 +17,22 @@ test('Page', () => {
       `;
     }
 
-    head({ config }) {
+    head() {
+      const { title } = this.config;
       return html`
-        <title>${config.title}</title>
-        <meta name="title" content=${config.title} />
-        <meta name="description" content=${config.title} />
+        <title>${title}</title>
+        <meta name="title" content=${title} />
+        <meta name="description" content=${title} />
       `;
     }
 
-    body({ config }) {
+    body() {
+      const { title } = this.config;
       return html`
         <div>
           <app-header></app-header>
           <main class="flex flex-1 flex-col mt-20 items-center">
-            <h1 class="text-5xl">${config.title}</h1>
+            <h1 class="text-5xl">${title}</h1>
           </main>
         </div>
       `;

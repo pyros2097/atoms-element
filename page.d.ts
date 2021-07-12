@@ -13,16 +13,14 @@ export declare type Config = {
   themes: {[key: string]: any}
 }
 export declare type Data = any;
-export declare type Iteam = any;
+export declare type Item = any;
 
-export type Props = {
+export class Page {
   config: Config;
   data: Data;
-  item: Data;
-}
-export class Page {
-  route: (props: Props) => string;
-  styles: (props: Props) => string;
-  head: (props: Props) => string;
-  body: (props: Props) => string;
+  item: Item;
+  route: () => string;
+  styles: () => string;
+  head: () => string;
+  body: () => string;
 }
