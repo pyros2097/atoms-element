@@ -3,6 +3,56 @@ import { html, render as litRender, directive, NodePart, AttributePart, Property
 const isBrowser = typeof window !== 'undefined';
 export { html, isBrowser };
 
+const constructionToken = Symbol();
+
+export class CSSResult {
+  constructor(cssText, safeToken) {
+    if (safeToken !== constructionToken) {
+      throw new Error('CSSResult is not constructable. Use `unsafeCSS` or `css` instead.');
+    }
+    this.cssText = cssText;
+  }
+
+  toString() {
+    return this.cssText;
+  }
+}
+
+/**
+ * Wrap a value for interpolation in a [[`css`]] tagged template literal.
+ *
+ * This is unsafe because untrusted CSS text can be used to phone home
+ * or exfiltrate data to an attacker controlled site. Take care to only use
+ * this with trusted input.
+ */
+export const unsafeCSS = (value) => {
+  return new CSSResult(String(value), constructionToken);
+};
+
+const textFromCSSResult = (value) => {
+  if (value instanceof CSSResult) {
+    return value.cssText;
+  } else if (typeof value === 'number') {
+    return value;
+  } else {
+    throw new Error(
+      `Value passed to 'css' function must be a 'css' function result: ${value}. Use 'unsafeCSS' to pass non-literal values, but
+            take care to ensure page security.`,
+    );
+  }
+};
+
+/**
+ * Template tag which which can be used with LitElement's [[LitElement.styles |
+ * `styles`]] property to set element styles. For security reasons, only literal
+ * string values may be used. To incorporate non-literal values [[`unsafeCSS`]]
+ * may be used inside a template string part.
+ */
+export const css = (strings, ...values) => {
+  const cssText = values.reduce((acc, v, idx) => acc + textFromCSSResult(v) + strings[idx + 1], strings[0]);
+  return new CSSResult(cssText, constructionToken);
+};
+
 const lastAttributeNameRegex =
   /([ \x09\x0a\x0c\x0d])([^\0-\x1F\x7F-\x9F "'>=/]+)([ \x09\x0a\x0c\x0d]*=[ \x09\x0a\x0c\x0d]*(?:[^ \x09\x0a\x0c\x0d"'`<>=]*|"[^"]*|'[^']*))$/;
 
@@ -310,10 +360,10 @@ const enqueueLayoutEffects = batch(microtask, filo, (c) => c._flushEffects('layo
 const enqueueEffects = batch(task, filo, (c) => c._flushEffects('effects'));
 const enqueueUpdate = batch(microtask, fifo, (c) => c._performUpdate());
 
-const BaseElement = isBrowser ? window.HTMLElement : class {};
-const count = [0];
 const registry = {};
-export class AtomsElement extends BaseElement {
+const BaseElement = isBrowser ? window.HTMLElement : class {};
+
+export default class AtomsElement extends BaseElement {
   static register() {
     registry[this.name] = this;
     if (isBrowser) {
@@ -329,23 +379,15 @@ export class AtomsElement extends BaseElement {
     return registry[name];
   }
 
-  static getNextIndex() {
-    count[0] = count[0] + 1;
-    return count[0];
-  }
-
   static get observedAttributes() {
     if (!this.attrTypes) {
       return [];
     }
-    return Object.keys(this.attrTypes)
-      .filter((key) => this.attrTypes[key].type !== 'function')
-      .map((k) => k.toLowerCase());
+    return Object.keys(this.attrTypes).map((k) => k.toLowerCase());
   }
 
   constructor(attrs) {
     super();
-    this._id = `atoms:${this.constructor.getNextIndex()}`;
     this._dirty = false;
     this._connected = false;
     this.hooks = {
@@ -444,15 +486,13 @@ export class AtomsElement extends BaseElement {
   }
 
   getAttrs() {
-    return Object.keys(this.constructor.attrTypes)
-      .filter((key) => this.constructor.attrTypes[key].type !== 'function')
-      .reduceRight((acc, key) => {
-        const attrType = this.constructor.attrTypes[key];
-        const newValue = isBrowser ? this.getAttribute(key.toLowerCase()) : this.attrs.find((item) => item.name === key.toLowerCase()).value;
-        const data = attrType.parse(newValue);
-        attrType.validate(`<${this.constructor.name}> ${key}`, data);
-        acc[key] = data;
-        return acc;
-      }, {});
+    return Object.keys(this.constructor.attrTypes).reduceRight((acc, key) => {
+      const attrType = this.constructor.attrTypes[key];
+      const newValue = isBrowser ? this.getAttribute(key.toLowerCase()) : this.attrs.find((item) => item.name === key.toLowerCase())?.value;
+      const data = attrType.parse(newValue);
+      attrType.validate(`<${this.constructor.name}> ${key}`, data);
+      acc[key] = data;
+      return acc;
+    }, {});
   }
 }

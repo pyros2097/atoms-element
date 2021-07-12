@@ -1,5 +1,5 @@
 import { expect, test, jest } from '@jest/globals';
-import { AtomsElement, html, render, number, boolean, string, array, func, object, unsafeHTML, classMap } from '../src/index.js';
+import AtomsElement, { html, render, number, boolean, string, array, object, unsafeHTML, css, classMap } from './element.js';
 
 global.__DEV = true;
 
@@ -239,10 +239,15 @@ test('AtomsElement', async () => {
       address: object({
         street: string.isRequired,
       }).isRequired,
-      renderItem: func(),
     };
 
-    static css = ``;
+    styles() {
+      return css`
+        div {
+          color: red;
+        }
+      `;
+    }
 
     render() {
       const {
