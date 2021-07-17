@@ -241,20 +241,31 @@ test('AtomsElement', async () => {
       }).isRequired,
     };
 
-    styles() {
-      return css`
-        div {
-          color: red;
-        }
-      `;
-    }
+    static stateTypes = {
+      count: number.isRequired,
+    };
+
+    static effects = {
+      logEffect: {
+        callback: (attrs, state) => {
+          console.log(attrs, state);
+        },
+        deps: ['attrs.perPage', 'state.count'],
+      },
+    };
+
+    static styles = css`
+      div {
+        color: red;
+      }
+    `;
 
     render() {
       const {
         perPage,
         address: { street },
       } = this.attrs;
-      const [count] = this.useState(0);
+      const { count, setCount } = this.state;
       return html`
         <div perPage=${perPage}>
           <p>street: ${street}</p>
@@ -273,12 +284,21 @@ test('AtomsElement', async () => {
   ]);
   instance.renderItem = () => html`<div><p>render item 1</p></div>`;
   expect(AppItem.observedAttributes).toEqual(['perpage', 'address']);
-  const res = await render(instance.render());
+  const res = instance.renderTemplate();
   expect(res).toEqual(`
+        
         <div perPage="1">
           <p>street: 123</p>
           <p>count: 0</p>
           <div><p>render item 1</p></div>
         </div>
+      
+        <style>
+        
+      div {
+        color: red;
+      }
+    
+        </style>
       `);
 });

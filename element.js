@@ -292,22 +292,19 @@ export const array = checkComplex('array', (innerType, context, data) => {
 });
 export const func = checkComplex('function', (innerType, context, data) => {});
 
-const depsChanged = (prev, next) => prev == null || next.some((f, i) => !Object.is(f, prev[i]));
+// const depsChanged = (prev, next) => prev == null || next.some((f, i) => !Object.is(f, prev[i]));
+// useEffect(handler, deps) {
+//   const index = this.hooks.currentCursor++;
+//   if (!deps || depsChanged(this.hooks.deps[index], deps)) {
+//     this.hooks.deps[index] = deps || [];
+//     this.hooks.effects[index] = handler;
+//   }
+// }
 
-const batch = (runner, pick, callback) => {
-  const q = [];
-  const flush = () => {
-    let p;
-    while ((p = pick(q))) callback(p);
-  };
-  const run = runner(flush);
-  return (c) => q.push(c) === 1 && run();
-};
+const normalizeCss = `html{line-height:1.15;-webkit-text-size-adjust:100%}body{margin:0}main{display:block}h1{font-size:2em;margin:.67em 0}hr{box-sizing:content-box;height:0;overflow:visible}pre{font-family:monospace,monospace;font-size:1em}a{background-color:transparent}abbr[title]{border-bottom:none;text-decoration:underline;text-decoration:underline dotted}b,strong{font-weight:bolder}code,kbd,samp{font-family:monospace,monospace;font-size:1em}small{font-size:80%}sub,sup{font-size:75%;line-height:0;position:relative;vertical-align:baseline}sub{bottom:-.25em}sup{top:-.5em}img{border-style:none}button,input,optgroup,select,textarea{font-family:inherit;font-size:100%;line-height:1.15;margin:0}button,input{overflow:visible}button,select{text-transform:none}[type=button],[type=reset],[type=submit],button{-webkit-appearance:button}[type=button]::-moz-focus-inner,[type=reset]::-moz-focus-inner,[type=submit]::-moz-focus-inner,button::-moz-focus-inner{border-style:none;padding:0}[type=button]:-moz-focusring,[type=reset]:-moz-focusring,[type=submit]:-moz-focusring,button:-moz-focusring{outline:1px dotted ButtonText}fieldset{padding:.35em .75em .625em}legend{box-sizing:border-box;color:inherit;display:table;max-width:100%;padding:0;white-space:normal}progress{vertical-align:baseline}textarea{overflow:auto}[type=checkbox],[type=radio]{box-sizing:border-box;padding:0}[type=number]::-webkit-inner-spin-button,[type=number]::-webkit-outer-spin-button{height:auto}[type=search]{-webkit-appearance:textfield;outline-offset:-2px}[type=search]::-webkit-search-decoration{-webkit-appearance:none}::-webkit-file-upload-button{-webkit-appearance:button;font:inherit}details{display:block}summary{display:list-item}template{display:none}[hidden]{display:none}`;
 const fifo = (q) => q.shift();
 const filo = (q) => q.pop();
-const microtask = (flush) => {
-  return () => queueMicrotask(flush);
-};
+const microtask = (flush) => () => queueMicrotask(flush);
 const task = (flush) => {
   if (isBrowser) {
     const ch = new window.MessageChannel();
@@ -317,9 +314,6 @@ const task = (flush) => {
     return () => setImmediate(flush);
   }
 };
-const enqueueLayoutEffects = batch(microtask, filo, (c) => c._flushEffects('layoutEffects'));
-const enqueueEffects = batch(task, filo, (c) => c._flushEffects('effects'));
-const enqueueUpdate = batch(microtask, fifo, (c) => c._performUpdate());
 
 const registry = {};
 const BaseElement = isBrowser ? window.HTMLElement : class {};
@@ -351,17 +345,12 @@ export default class AtomsElement extends BaseElement {
     super();
     this._dirty = false;
     this._connected = false;
-    this.hooks = {
-      currentCursor: 0,
-      values: [],
-      deps: [],
-      effects: [],
-      layoutEffects: [],
-      cleanup: [],
-    };
+    this._state = {};
+    this._effects = {};
     this.ssrAttributes = ssrAttributes;
     this.config = isBrowser ? window.config : global.config;
     this.location = isBrowser ? window.location : global.location;
+    this.stylesMounted = false;
   }
 
   connectedCallback() {
@@ -372,10 +361,10 @@ export default class AtomsElement extends BaseElement {
   }
   disconnectedCallback() {
     this._connected = false;
-    let cleanup;
-    while ((cleanup = this.hooks.cleanup.shift())) {
-      cleanup();
-    }
+    // let cleanup;
+    // while ((cleanup = this.hooks.cleanup.shift())) {
+    //   cleanup();
+    // }
   }
 
   attributeChangedCallback(key, oldValue, newValue) {
@@ -389,33 +378,43 @@ export default class AtomsElement extends BaseElement {
       return;
     }
     this._dirty = true;
-    enqueueUpdate(this);
+    this.enqueueUpdate();
   }
 
   _performUpdate() {
     if (!this._connected) {
       return;
     }
-    this.hooks.currentCursor = 0;
-    render(this.render(), this);
-    enqueueLayoutEffects(this);
-    enqueueEffects(this);
+    this.renderTemplate();
+    this.enqueueEffects();
     this._dirty = false;
   }
 
-  _flushEffects(effectKey) {
-    const effects = this.hooks[effectKey];
-    const cleanups = this.hooks.cleanup;
-    for (let i = 0, len = effects.length; i < len; i++) {
-      if (effects[i]) {
-        cleanups[i] && cleanups[i]();
-        const cleanup = effects[i]();
-        if (cleanup) {
-          cleanups[i] = cleanup;
-        }
-        delete effects[i];
-      }
-    }
+  batch(runner, pick, callback) {
+    const q = [];
+    const flush = () => {
+      let p;
+      while ((p = pick(q))) callback(p);
+    };
+    const run = runner(flush);
+    q.push(this) === 1 && run();
+  }
+
+  enqueueEffects() {
+    this.batch(task, filo, () => this._flushEffects());
+  }
+
+  enqueueUpdate() {
+    this.batch(microtask, fifo, () => this._performUpdate());
+  }
+
+  _flushEffects() {
+    Object.keys(this.constructor.effects).forEach((key) => {
+      const effect = this.constructor.effects[key];
+      //  if (!effect.deps || depsChanged(, effect.deps)) {
+      //  }
+      effect.callback(this.attrs, this.state);
+    });
   }
 
   get attrs() {
@@ -429,105 +428,36 @@ export default class AtomsElement extends BaseElement {
     }, {});
   }
 
-  useState(initialState) {
-    const index = this.hooks.currentCursor++;
-    if (this.hooks.values.length <= index) {
-      this.hooks.values[index] = [
-        typeof initialState === 'function' ? initialState() : initialState,
-        (nextState) => {
-          const state = this.hooks.values[index][0];
-          if (typeof nextState === 'function') {
-            nextState = nextState(state);
-          }
-          if (!Object.is(state, nextState)) {
-            this.hooks.values[index][0] = nextState;
-            this.update();
-          }
-        },
-      ];
-    }
-    return this.hooks.values[index];
+  get state() {
+    return Object.keys(this.constructor.stateTypes).reduceRight((acc, key) => {
+      if (!this._state[key]) {
+        this._state[key] = 0; // TODO: default
+      }
+      acc[key] = this._state[key];
+      acc[`set${key[0].toUpperCase()}${key.slice(1)}`] = (v) => () => {
+        this._state[key] = v;
+        this.update();
+      };
+      return acc;
+    }, {});
   }
 
-  useReducer(reducer, initialState) {
-    const index = this.hooks.currentCursor++;
-    if (this.hooks.values.length <= index) {
-      this.hooks.values[index] = [
-        initialState,
-        (action) => {
-          const state = this.hooks.values[index][0];
-          const nextState = reducer(state, action);
-          if (!Object.is(state, nextState)) {
-            this.hooks.values[index][0] = nextState;
-            this.update();
-          }
-        },
-      ];
-    }
-    return this.hooks.values[index];
-  }
-
-  useEffect(handler, deps) {
-    const index = this.hooks.currentCursor++;
-    if (!deps || depsChanged(this.hooks.deps[index], deps)) {
-      this.hooks.deps[index] = deps || [];
-      this.hooks.effects[index] = handler;
+  renderTemplate() {
+    const template = this.render();
+    const result = render(template, this);
+    if (isBrowser) {
+      if (!this.stylesMounted) {
+        this.appendChild(document.createElement('style')).textContent = normalizeCss + '\n' + this.constructor.styles.toString();
+        this.stylesMounted = true;
+      }
+    } else {
+      // ${normalizeCss}
+      return `
+        ${result}
+        <style>
+        ${this.constructor.styles.toString()}
+        </style>
+      `;
     }
   }
-
-  useLayoutEffect(handler, deps) {
-    const index = this.hooks.currentCursor++;
-    if (!deps || depsChanged(this.hooks.deps[index], deps)) {
-      this.hooks.deps[index] = deps || [];
-      this.hooks.layoutEffects[index] = handler;
-    }
-  }
-
-  useMemo(fn, deps) {
-    const index = this.hooks.currentCursor++;
-    if (!deps || depsChanged(this.hooks.deps[index], deps)) {
-      this.hooks.deps[index] = deps || [];
-      this.hooks.values[i] = fn();
-    }
-    return this.hooks.values[i];
-  }
-
-  useCallback(callback, deps) {
-    return this.useMemo(() => callback, deps);
-  }
-
-  //   export const useDispatchEvent = <T>(name: string, eventInit: EventInit = {}) =>
-  //   hooks<(detail: T) => void>({
-  //     _onmount: (_, c) => (detail: T) =>
-  //       c._dispatch(name, { ...eventInit, detail }),
-  //   });
-
-  // export const useListenEvent = <T extends Event>(
-  //   name: string,
-  //   listener: Listener<T>
-  // ) =>
-  //   hooks<void>({
-  //     _onmount(h, c, i) {
-  //       h._cleanup[i] = c._listen(name, listener);
-  //     },
-  //   });
-
-  // useErrorBoundary() {
-  //   const [error, setError] = this.useState(null);
-  //   useListenEvent(errorType, (e) => {
-  //     setError(e.detail);
-  //   });
-  //   return [error, () => setError(null)];
-  // }
-
-  // public _dispatch<T>(name: string, init: CustomEventInit<T>) {
-  //         this.dispatchEvent(new CustomEvent<T>(name, init));
-  //       }
-
-  //       public _listen<T extends Event>(name: string, listener: Listener<T>) {
-  //         this.addEventListener(name, listener as EventListener);
-  //         return () => {
-  //           this.removeEventListener(name, listener as EventListener);
-  //         };
-  //       }
 }
