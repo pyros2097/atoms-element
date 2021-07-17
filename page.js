@@ -15,9 +15,20 @@ export default class Page {
       if (AtomsElement.getElement(child.tagName)) {
         const Clazz = AtomsElement.getElement(child.tagName);
         const instance = new Clazz(child.attrs);
-        const res = render(instance.render());
+        const res = instance.renderTemplate();
         const frag = parse5.parseFragment(res);
         child.childNodes.push(...frag.childNodes);
+        child.childNodes.push({
+          nodeName: 'style',
+          tagName: 'style',
+          attrs: [],
+          childNodes: [
+            {
+              nodeName: '#text',
+              value: Clazz.styles.toString(),
+            },
+          ],
+        });
       }
       if (child.childNodes) {
         this.find(child);
@@ -36,7 +47,7 @@ export default class Page {
     const isProd = process.env.NODE_ENV === 'production';
     const props = { config: this.config, data: this.data, item: this.item };
     const headHtml = this.ssr(this.head(props));
-    const stylesCss = this.styles(props).cssText;
+    const stylesCss = this.styles(props);
     const bodyHtml = this.ssr(this.body(props));
     return `
       <!DOCTYPE html>
