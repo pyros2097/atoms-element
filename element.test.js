@@ -250,13 +250,12 @@ test('AtomsElement', async () => {
       count: number().required().default(0),
     };
 
-    static effects = {
-      logEffect: {
-        callback: (attrs, state) => {
-          console.log(attrs, state);
-        },
-        deps: ['attrs.perPage', 'state.count'],
-      },
+    static computedTypes = {
+      sum: number()
+        .required()
+        .compute('count', (count) => {
+          return count + 10;
+        }),
     };
 
     static styles = css`
@@ -271,10 +270,12 @@ test('AtomsElement', async () => {
         address: { street },
       } = this.attrs;
       const { count, setCount } = this.state;
+      const { sum } = this.computed;
       return html`
         <div perPage=${perPage}>
           <p>street: ${street}</p>
           <p>count: ${count}</p>
+          <p>sum: ${sum}</p>
           ${this.renderItem()}
         </div>
       `;
@@ -295,6 +296,7 @@ test('AtomsElement', async () => {
         <div perPage="1">
           <p>street: 123</p>
           <p>count: 0</p>
+          <p>sum: 10</p>
           <div><p>render item 1</p></div>
         </div>
       

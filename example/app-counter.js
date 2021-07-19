@@ -16,6 +16,14 @@ class Counter extends AtomsElement {
       .default((attrs) => attrs.meta?.start || 0),
   };
 
+  static computedTypes = {
+    sum: number()
+      .required()
+      .compute('count', (count) => {
+        return count + 10;
+      }),
+  };
+
   static styles = css`
     .container {
     }
@@ -24,6 +32,7 @@ class Counter extends AtomsElement {
   render() {
     const { name } = this.attrs;
     const { count, setCount } = this.state;
+    const { sum } = this.computed;
 
     return html`
       <div>
@@ -32,6 +41,7 @@ class Counter extends AtomsElement {
           <button @click=${() => setCount((v) => v - 1)}>-</button>
           <div class="mx-20">
             <h1 class="text-1xl">${count}</h1>
+            <h1 class="text-1xl">${sum}</h1>
           </div>
           <button @click=${() => setCount((v) => v + 1)}>+</button>
         </div>

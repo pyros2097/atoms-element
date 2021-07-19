@@ -7,6 +7,10 @@ class CounterPage extends Page {
     return '/counter';
   }
 
+  datapaths() {
+    return '/data/items/**';
+  }
+
   styles() {
     return css``;
   }
