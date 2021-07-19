@@ -210,68 +210,43 @@ const logError = (msg) => {
   }
 };
 
-const checkRequired = (context, data) => {
-  if (data === null || typeof data === 'undefined') {
-    logError(`'${context}' Field is required`);
-  }
-};
-
-const checkPrimitive = (primitiveType) => {
+const validator = (type, validate) => (innerType) => {
+  const isPrimitiveType = ['number', 'string', 'boolean'].includes(type);
   const common = {
-    type: primitiveType,
-    parse: (attr) => attr,
-  };
-  const validate = (context, data) => {
-    if (data === null || typeof data === 'undefined') {
-      return;
-    }
-    const dataType = typeof data;
-    if (dataType !== primitiveType) {
-      logError(`'${context}' Expected type '${primitiveType}' got type '${dataType}'`);
-    }
-  };
-  return {
-    validate,
-    ...common,
-    isRequired: {
-      ...common,
-      validate: (context, data) => {
-        checkRequired(context, data);
-        validate(context, data);
-      },
+    type: type,
+    parse: isPrimitiveType ? (attr) => attr : (attr) => (attr ? JSON.parse(attr.replace(/'/g, `"`)) : null),
+    validate: (context, data) => {
+      if (data === null || typeof data === 'undefined') {
+        if (common.__required) {
+          logError(`'${context}' Field is required`);
+        }
+        return;
+      }
+      if (!isPrimitiveType) {
+        validate(innerType, context, data);
+      } else {
+        const dataType = typeof data;
+        if (dataType !== type) {
+          logError(`'${context}' Expected type '${type}' got type '${dataType}'`);
+        }
+      }
     },
   };
+  common.required = () => {
+    common.__required = true;
+    return common;
+  };
+  common.default = (fnOrValue) => {
+    common.__default = fnOrValue;
+    return common;
+  };
+  return common;
 };
 
-const checkComplex = (complexType, validate) => {
-  const common = {
-    type: complexType,
-    parse: (attr) => (attr ? JSON.parse(attr.replace(/'/g, `"`)) : null),
-  };
-  return (innerType) => {
-    return {
-      ...common,
-      validate: (context, data) => {
-        if (!data) {
-          return;
-        }
-        validate(innerType, context, data);
-      },
-      isRequired: {
-        ...common,
-        validate: (context, data) => {
-          checkRequired(context, data);
-          validate(innerType, context, data);
-        },
-      },
-    };
-  };
-};
-
-export const number = checkPrimitive('number');
-export const string = checkPrimitive('string');
-export const boolean = checkPrimitive('boolean');
-export const object = checkComplex('object', (innerType, context, data) => {
+export const number = validator('number');
+export const string = validator('string');
+export const boolean = validator('boolean');
+export const object = validator('object', (innerType, context, data) => {
   if (data.constructor !== Object) {
     logError(`'${context}' Expected object literal '{}' got '${typeof data}'`);
   }
@@ -281,7 +256,7 @@ export const object = checkComplex('object', (innerType, context, data) => {
     fieldValidator.validate(`${context}.${key}`, item);
   }
 });
-export const array = checkComplex('array', (innerType, context, data) => {
+export const array = validator('array', (innerType, context, data) => {
   if (!Array.isArray(data)) {
     logError(`Expected Array got ${data}`);
   }
@@ -290,7 +265,6 @@ export const array = checkComplex('array', (innerType, context, data) => {
     innerType.validate(`${context}[${i}]`, item);
   }
 });
-export const func = checkComplex('function', (innerType, context, data) => {});
 
 // const depsChanged = (prev, next) => prev == null || next.some((f, i) => !Object.is(f, prev[i]));
 // useEffect(handler, deps) {
@@ -430,8 +404,9 @@ export default class AtomsElement extends BaseElement {
 
   get state() {
     return Object.keys(this.constructor.stateTypes).reduceRight((acc, key) => {
-      if (!this._state[key]) {
-        this._state[key] = 0; // TODO: default
+      const stateType = this.constructor.stateTypes[key];
+      if (!this._state[key] && typeof stateType.__default !== 'undefined') {
+        this._state[key] = typeof stateType.__default === 'function' ? stateType.__default(this.attrs, this._state) : stateType.__default;
       }
       acc[key] = this._state[key];
       acc[`set${key[0].toUpperCase()}${key.slice(1)}`] = (v) => () => {
