@@ -6,39 +6,44 @@ global.__DEV = true;
 const primitives = [
   {
     type: 'number',
-    validator: number,
     valid: [123, 40.5, 6410],
     invalid: ['123', false, {}, [], new Date()],
   },
   {
     type: 'boolean',
-    validator: boolean,
     valid: [false, true],
     invalid: ['123', 123, {}, [], new Date()],
   },
   {
     type: 'string',
-    validator: string,
     valid: ['', '123'],
     invalid: [123, false, {}, [], new Date()],
   },
 ];
+const primitiveTypes = {
+  number: number,
+  boolean: boolean,
+  string: string,
+};
 
 primitives.forEach((value) =>
   it(`${value.type}`, () => {
     const spy = jest.spyOn(global.console, 'warn').mockImplementation();
     const context = 'key';
-    expect(value.validator.type).toEqual(value.type);
-    expect(value.validator.isRequired.type).toEqual(value.type);
-    value.validator.validate(context);
+    const validator = primitiveTypes[value.type]();
+    const validatorReq = primitiveTypes[value.type]().required();
+    expect(validator.type).toEqual(value.type);
+    expect(validator.__required).toEqual(undefined);
+    expect(validatorReq.__required).toEqual(true);
+    validator.validate(context);
     for (const v of value.valid) {
-      value.validator.validate(context, v);
-      value.validator.isRequired.validate(context, v);
+      validator.validate(context, v);
+      validatorReq.validate(context, v);
     }
-    value.validator.isRequired.validate(context);
+    validatorReq.validate(context);
     expect(console.warn).toHaveBeenCalledWith(`'key' Field is required`);
     for (const v of value.invalid) {
-      value.validator.validate(context, v);
+      validator.validate(context, v);
       expect(console.warn).toHaveBeenCalledWith(`'key' Expected type '${value.type}' got type '${typeof v}'`);
     }
     spy.mockRestore();
@@ -49,14 +54,14 @@ test('object', () => {
   const spy = jest.spyOn(global.console, 'warn').mockImplementation();
   const context = 'data';
   object({}).validate(context, { name: '123' });
-  object({ name: string }).validate(context, { name: '123' });
-  object({ name: string.isRequired }).validate(context, { name: '' });
-  object({ name: string.isRequired }).validate(context, {});
+  object({ name: string() }).validate(context, { name: '123' });
+  object({ name: string().required() }).validate(context, { name: '' });
+  object({ name: string().required() }).validate(context, {});
   expect(console.warn).toHaveBeenCalledWith(`'data.name' Field is required`);
 
   const schema = object({
     address: object({
-      street: string,
+      street: string(),
     }),
   });
   schema.validate(context, {});
@@ -83,7 +88,7 @@ test('object', () => {
 
   const schema2 = object({
     address: object({
-      street: string.isRequired,
+      street: string().required(),
     }),
   });
   schema2.validate(context, {});
@@ -102,15 +107,15 @@ test('object', () => {
 test('array', () => {
   const spy = jest.spyOn(global.console, 'warn').mockImplementation();
   const context = 'items';
-  array(string).validate(context, ['123']);
-  array(string).validate(context, [123]);
+  array(string()).validate(context, ['123']);
+  array(string()).validate(context, [123]);
   expect(console.warn).toHaveBeenCalledWith(`'items[0]' Expected type 'string' got type 'number'`);
-  array(array(string)).validate(context, [['123']]);
-  array(array(string)).validate(context, [[123]]);
+  array(array(string())).validate(context, [['123']]);
+  array(array(string())).validate(context, [[123]]);
   expect(console.warn).toHaveBeenCalledWith(`'items[0][0]' Expected type 'string' got type 'number'`);
 
   const schema = object({
-    street: string.isRequired,
+    street: string().required(),
   });
   array(schema).validate(context, []);
   array(schema).validate(context, [{ street: '123' }, { street: '456' }, { street: '789' }]);
@@ -235,14 +240,14 @@ test('AtomsElement', async () => {
     static name = 'app-item';
 
     static attrTypes = {
-      perPage: string.isRequired,
+      perPage: string().required(),
       address: object({
-        street: string.isRequired,
-      }).isRequired,
+        street: string().required(),
+      }).required(),
     };
 
     static stateTypes = {
-      count: number.isRequired,
+      count: number().required().default(0),
     };
 
     static effects = {

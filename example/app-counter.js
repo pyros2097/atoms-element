@@ -4,10 +4,16 @@ class Counter extends AtomsElement {
   static name = 'app-counter';
 
   static attrTypes = {
-    name: string.isRequired,
+    name: string().required(),
     meta: object({
-      start: number,
+      start: number(),
     }),
+  };
+
+  static stateTypes = {
+    count: number()
+      .required()
+      .default((attrs) => attrs.meta?.start || 0),
   };
 
   static styles = css`
@@ -16,8 +22,8 @@ class Counter extends AtomsElement {
   `;
 
   render() {
-    const { name, meta } = this.attrs;
-    const [count, setCount] = this.useState(meta?.start || 0);
+    const { name } = this.attrs;
+    const { count, setCount } = this.state;
 
     return html`
       <div>
