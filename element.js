@@ -240,6 +240,15 @@ const validator = (type, validate) => (innerType) => {
     common.__default = fnOrValue;
     return common;
   };
+  common.compute = (...args) => {
+    const fn = args[args.length - 1];
+    const deps = args.slice(0, args.length - 1);
+    common.__compute = {
+      fn,
+      deps,
+    };
+    return common;
+  };
   return common;
 };
 
@@ -265,15 +274,6 @@ export const array = validator('array', (innerType, context, data) => {
     innerType.validate(`${context}[${i}]`, item);
   }
 });
-
-// const depsChanged = (prev, next) => prev == null || next.some((f, i) => !Object.is(f, prev[i]));
-// useEffect(handler, deps) {
-//   const index = this.hooks.currentCursor++;
-//   if (!deps || depsChanged(this.hooks.deps[index], deps)) {
-//     this.hooks.deps[index] = deps || [];
-//     this.hooks.effects[index] = handler;
-//   }
-// }
 
 const normalizeCss = `html{line-height:1.15;-webkit-text-size-adjust:100%}body{margin:0}main{display:block}h1{font-size:2em;margin:.67em 0}hr{box-sizing:content-box;height:0;overflow:visible}pre{font-family:monospace,monospace;font-size:1em}a{background-color:transparent}abbr[title]{border-bottom:none;text-decoration:underline;text-decoration:underline dotted}b,strong{font-weight:bolder}code,kbd,samp{font-family:monospace,monospace;font-size:1em}small{font-size:80%}sub,sup{font-size:75%;line-height:0;position:relative;vertical-align:baseline}sub{bottom:-.25em}sup{top:-.5em}img{border-style:none}button,input,optgroup,select,textarea{font-family:inherit;font-size:100%;line-height:1.15;margin:0}button,input{overflow:visible}button,select{text-transform:none}[type=button],[type=reset],[type=submit],button{-webkit-appearance:button}[type=button]::-moz-focus-inner,[type=reset]::-moz-focus-inner,[type=submit]::-moz-focus-inner,button::-moz-focus-inner{border-style:none;padding:0}[type=button]:-moz-focusring,[type=reset]:-moz-focusring,[type=submit]:-moz-focusring,button:-moz-focusring{outline:1px dotted ButtonText}fieldset{padding:.35em .75em .625em}legend{box-sizing:border-box;color:inherit;display:table;max-width:100%;padding:0;white-space:normal}progress{vertical-align:baseline}textarea{overflow:auto}[type=checkbox],[type=radio]{box-sizing:border-box;padding:0}[type=number]::-webkit-inner-spin-button,[type=number]::-webkit-outer-spin-button{height:auto}[type=search]{-webkit-appearance:textfield;outline-offset:-2px}[type=search]::-webkit-search-decoration{-webkit-appearance:none}::-webkit-file-upload-button{-webkit-appearance:button;font:inherit}details{display:block}summary{display:list-item}template{display:none}[hidden]{display:none}`;
 const fifo = (q) => q.shift();
@@ -320,7 +320,6 @@ export default class AtomsElement extends BaseElement {
     this._dirty = false;
     this._connected = false;
     this._state = {};
-    this._effects = {};
     this.ssrAttributes = ssrAttributes;
     this.config = isBrowser ? window.config : global.config;
     this.location = isBrowser ? window.location : global.location;
@@ -335,10 +334,6 @@ export default class AtomsElement extends BaseElement {
   }
   disconnectedCallback() {
     this._connected = false;
-    // let cleanup;
-    // while ((cleanup = this.hooks.cleanup.shift())) {
-    //   cleanup();
-    // }
   }
 
   attributeChangedCallback(key, oldValue, newValue) {
@@ -360,7 +355,6 @@ export default class AtomsElement extends BaseElement {
       return;
     }
     this.renderTemplate();
-    this.enqueueEffects();
     this._dirty = false;
   }
 
@@ -374,21 +368,8 @@ export default class AtomsElement extends BaseElement {
     q.push(this) === 1 && run();
   }
 
-  enqueueEffects() {
-    this.batch(task, filo, () => this._flushEffects());
-  }
-
   enqueueUpdate() {
     this.batch(microtask, fifo, () => this._performUpdate());
-  }
-
-  _flushEffects() {
-    Object.keys(this.constructor.effects).forEach((key) => {
-      const effect = this.constructor.effects[key];
-      //  if (!effect.deps || depsChanged(, effect.deps)) {
-      //  }
-      effect.callback(this.attrs, this.state);
-    });
   }
 
   get attrs() {
@@ -409,10 +390,26 @@ export default class AtomsElement extends BaseElement {
         this._state[key] = typeof stateType.__default === 'function' ? stateType.__default(this.attrs, this._state) : stateType.__default;
       }
       acc[key] = this._state[key];
-      acc[`set${key[0].toUpperCase()}${key.slice(1)}`] = (v) => () => {
-        this._state[key] = v;
+      acc[`set${key[0].toUpperCase()}${key.slice(1)}`] = (v) => {
+        // TODO: check type on set
+        this._state[key] = typeof v === 'function' ? v(this._state[key]) : v;
         this.update();
       };
+      return acc;
+    }, {});
+  }
+
+  get computed() {
+    return Object.keys(this.constructor.computedTypes).reduceRight((acc, key) => {
+      const type = this.constructor.computedTypes[key];
+      const state = this.state;
+      const values = type.__compute.deps.reduce((acc, key) => {
+        if (typeof state[key] !== undefined) {
+          acc.push(state[key]);
+        }
+        return acc;
+      }, []);
+      acc[key] = type.__compute.fn(...values);
       return acc;
     }, {});
   }
