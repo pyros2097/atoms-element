@@ -1,6 +1,6 @@
 {
   "name": "atoms-element",
-  "version": "1.2.1",
+  "version": "2.1.0",
   "description": "A simple web component library for defining your custom elements. It works on both client and server. It supports hooks and follows the same principles of react.",
   "keywords": [
     "pyros.sh",
@@ -10,28 +10,24 @@
     "server side rendering",
     "client",
     "server",
-    "hooks",
     "react",
-    "lit-html",
-    "lit-html-server",
-    "haunted",
-    "tonic",
-    "atomico",
-    "fuco"
+    "lit-html"
+  ],
+  "files": [
+    "lit-html.js",
+    "element.js",
+    "element.d.ts",
+    "page.js",
+    "page.d.ts"
   ],
   "license": "MIT",
-  "main": "src/index.js",
-  "files": [
-    "src",
-    "example"
-  ],
-  "typings": "src/index.d.ts",
   "author": "pyros.sh",
   "type": "module",
   "engines": {
     "node": ">=14.0.0"
   },
   "scripts": {
+    "example": "node example/server.js",
     "test": "NODE_OPTIONS=--experimental-vm-modules jest"
   },
   "devDependencies": {
