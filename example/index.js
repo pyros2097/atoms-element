@@ -1,23 +1,30 @@
 import { html, css } from '../element.js';
-import createPage from '../page.js';
+import { createPage } from '../page.js';
 import './app-counter.js';
 
 const route = () => {
   return '/counter';
 };
 
-const styles = () => css({});
+const styles = css({
+  center: {
+    display: 'flex',
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+});
 
 const head = ({ config }) => {
   return html`
     <title>${config.title}</title>
-    <link href="/modern-normalize.css" rel="stylesheet" as="style" />
+    <link href="/styles.css" rel="stylesheet" as="style" />
   `;
 };
 
 const body = () => {
   return html`
-    <div>
+    <div class=${styles.center}>
       <app-counter name="1" meta="{'start': 5}"></app-counter>
     </div>
   `;
