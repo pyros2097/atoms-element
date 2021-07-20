@@ -1,7 +1,7 @@
 import parse5 from 'parse5';
 import { AtomsElement, render } from './element.js';
 
-const find = (node) => {
+export const find = (node) => {
   for (const child of node.childNodes) {
     if (AtomsElement.getElement(child.tagName)) {
       const Clazz = AtomsElement.getElement(child.tagName);
@@ -16,20 +16,19 @@ const find = (node) => {
   }
 };
 
-const ssr = (template) => {
+export const ssr = (template) => {
   const text = render(template);
   const h = parse5.parseFragment(text);
   find(h);
   return parse5.serialize(h);
 };
 
-const createPage = ({ route, datapaths, head, body, styles }) => {
+export const createPage = ({ route, datapaths, head, body, styles }) => {
   return ({ config, data, item, headScript, bodyScript }) => {
     const isProd = process.env.NODE_ENV === 'production';
     const props = { config, data, item };
     const headHtml = ssr(head(props));
     const bodyHtml = ssr(body(props));
-    const stylesCss = styles(props);
     return `
       <!DOCTYPE html>
       <html lang="${config.lang}">
@@ -42,7 +41,7 @@ const createPage = ({ route, datapaths, head, body, styles }) => {
           <link rel="icon" type="image/png" href="/assets/icon.png" />
           ${headHtml}
           <style>
-            ${stylesCss.toString()}
+            ${styles.toString()}
           </style>
           ${headScript}
         </head>
@@ -60,5 +59,3 @@ const createPage = ({ route, datapaths, head, body, styles }) => {
   `;
   };
 };
-
-export default createPage;

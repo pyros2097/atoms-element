@@ -1,4 +1,4 @@
-import createElement, { html, css, object, number, string } from '../element.js';
+import { createElement, html, css, object, number, string } from '../element.js';
 
 const name = () => 'app-counter';
 
@@ -25,28 +25,27 @@ const computedTypes = () => ({
 
 const styles = css({
   title: {
-    fontSize: '24px',
+    fontSize: '20px',
     marginBottom: '0.5rem',
+    textAlign: 'center',
+  },
+  span: {
+    fontSize: '16px',
   },
   container: {
     display: 'flex',
     flex: 1,
     flexDirection: 'row',
     fontSize: '32px',
-    color: 'gray',
+    color: 'rgba(55, 65, 81, 1)',
   },
   mx: {
-    marginLeft: '40px',
-    marginRight: '40px',
+    marginLeft: '5rem',
+    marginRight: '5rem',
+    fontSize: '30px',
+    fontFamily: `ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace`,
   },
   button: {
-    // margin: 0,
-    // padding: 0,
-    // cursor: 'pointer',
-    // backgroundImage: 'none',
-    // '-webkitAppearance': 'button',
-    // textTransform: 'none',
-    // fontSize: '100%',
     paddingTop: '0.5rem',
     paddingBottom: '0.5rem',
     paddingLeft: '1rem',
@@ -58,20 +57,25 @@ const styles = css({
 });
 
 const render = ({ attrs, state, computed }) => {
-  const { name } = attrs;
+  const { name, meta } = attrs;
   const { count, setCount } = state;
   const { sum } = computed;
 
   return html`
     <div>
-      <div class=${styles.title}>Counter: ${name}</div>
+      <div class=${styles.title}>
+        Counter: ${name}
+        <span class=${styles.span}>starts at ${meta?.start}</span>
+      </div>
       <div class=${styles.container}>
         <button class=${styles.button} @click=${() => setCount((v) => v - 1)}>-</button>
         <div class=${styles.mx}>
           <h1>${count}</h1>
-          <h1>${sum}</h1>
         </div>
         <button class=${styles.button} @click=${() => setCount((v) => v + 1)}>+</button>
+      </div>
+      <div class=${styles.mx}>
+        <h1>Sum: ${sum}</h1>
       </div>
     </div>
   `;

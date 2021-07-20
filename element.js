@@ -423,7 +423,7 @@ export class AtomsElement extends BaseElement {
   }
 }
 
-const createElement = ({ name, attrTypes, stateTypes, computedTypes, styles, render }) => {
+export const createElement = ({ name, attrTypes, stateTypes, computedTypes, styles, render }) => {
   const Element = class extends AtomsElement {
     static name = name();
 
@@ -449,5 +449,3 @@ const createElement = ({ name, attrTypes, stateTypes, computedTypes, styles, ren
   Element.register();
   return { name, attrTypes, stateTypes, computedTypes, styles, render };
 };
-
-export default createElement;

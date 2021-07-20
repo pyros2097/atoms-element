@@ -11,7 +11,7 @@ const port = process.argv[2] || 3000;
 const map = {
   '/element.js': `${__dirname}/../element.js`,
   '/lit-html.js': `${__dirname}/../lit-html.js`,
-  '/modern-normalize.css': `${__dirname}/modern-normalize.css`,
+  '/styles.css': `${__dirname}/styles.css`,
   '/app-counter.js': `${__dirname}/app-counter.js`,
   '.js': 'text/javascript',
   '.css': 'text/css',
