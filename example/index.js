@@ -1,32 +1,31 @@
 import { html, css } from '../element.js';
-import Page from '../page.js';
+import createPage from '../page.js';
 import './app-counter.js';
 
-class CounterPage extends Page {
-  route() {
-    return '/counter';
-  }
+const route = () => {
+  return '/counter';
+};
 
-  datapaths() {
-    return '/data/items/**';
-  }
+const styles = () => css({});
 
-  styles() {
-    return css``;
-  }
+const head = ({ config }) => {
+  return html`
+    <title>${config.title}</title>
+    <link href="/modern-normalize.css" rel="stylesheet" as="style" />
+  `;
+};
 
-  head({ config }) {
-    return html` <title>${config.title}</title> `;
-  }
+const body = () => {
+  return html`
+    <div>
+      <app-counter name="1" meta="{'start': 5}"></app-counter>
+    </div>
+  `;
+};
 
-  body() {
-    return html`
-      <div>
-        <app-counter name="1"></app-counter>
-      </div>
-    `;
-  }
-}
-
-const counterPage = new CounterPage({ config: { lang: 'en', title: 'Counter App' } });
-console.log(counterPage.render());
+export default createPage({
+  route,
+  styles,
+  head,
+  body,
+});

@@ -1,53 +1,87 @@
-import AtomsElement, { html, css, object, number, string } from '../element.js';
+import createElement, { html, css, object, number, string } from '../element.js';
 
-class Counter extends AtomsElement {
-  static name = 'app-counter';
+const name = () => 'app-counter';
 
-  static attrTypes = {
-    name: string().required(),
-    meta: object({
-      start: number(),
+const attrTypes = () => ({
+  name: string().required(),
+  meta: object({
+    start: number(),
+  }),
+});
+
+const stateTypes = () => ({
+  count: number()
+    .required()
+    .default((attrs) => attrs.meta?.start || 0),
+});
+
+const computedTypes = () => ({
+  sum: number()
+    .required()
+    .compute('count', (count) => {
+      return count + 10;
     }),
-  };
+});
 
-  static stateTypes = {
-    count: number()
-      .required()
-      .default((attrs) => attrs.meta?.start || 0),
-  };
+const styles = css({
+  title: {
+    fontSize: '24px',
+    marginBottom: '0.5rem',
+  },
+  container: {
+    display: 'flex',
+    flex: 1,
+    flexDirection: 'row',
+    fontSize: '32px',
+    color: 'gray',
+  },
+  mx: {
+    marginLeft: '40px',
+    marginRight: '40px',
+  },
+  button: {
+    // margin: 0,
+    // padding: 0,
+    // cursor: 'pointer',
+    // backgroundImage: 'none',
+    // '-webkitAppearance': 'button',
+    // textTransform: 'none',
+    // fontSize: '100%',
+    paddingTop: '0.5rem',
+    paddingBottom: '0.5rem',
+    paddingLeft: '1rem',
+    paddingRight: '1rem',
+    color: 'rgba(55, 65, 81, 1)',
+    borderRadius: '0.25rem',
+    backgroundColor: 'rgba(209, 213, 219, 1)',
+  },
+});
 
-  static computedTypes = {
-    sum: number()
-      .required()
-      .compute('count', (count) => {
-        return count + 10;
-      }),
-  };
+const render = ({ attrs, state, computed }) => {
+  const { name } = attrs;
+  const { count, setCount } = state;
+  const { sum } = computed;
 
-  static styles = css`
-    .container {
-    }
-  `;
-
-  render() {
-    const { name } = this.attrs;
-    const { count, setCount } = this.state;
-    const { sum } = this.computed;
-
-    return html`
-      <div>
-        <div class="font-bold mb-2">Counter: ${name}</div>
-        <div class="flex flex-1 flex-row text-3xl text-gray-700">
-          <button @click=${() => setCount((v) => v - 1)}>-</button>
-          <div class="mx-20">
-            <h1 class="text-1xl">${count}</h1>
-            <h1 class="text-1xl">${sum}</h1>
-          </div>
-          <button @click=${() => setCount((v) => v + 1)}>+</button>
+  return html`
+    <div>
+      <div class=${styles.title}>Counter: ${name}</div>
+      <div class=${styles.container}>
+        <button class=${styles.button} @click=${() => setCount((v) => v - 1)}>-</button>
+        <div class=${styles.mx}>
+          <h1>${count}</h1>
+          <h1>${sum}</h1>
         </div>
+        <button class=${styles.button} @click=${() => setCount((v) => v + 1)}>+</button>
       </div>
-    `;
-  }
-}
+    </div>
+  `;
+};
 
-Counter.register();
+export default createElement({
+  name,
+  attrTypes,
+  stateTypes,
+  computedTypes,
+  styles,
+  render,
+});

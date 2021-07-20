@@ -33,7 +33,7 @@
     "node": ">=14.0.0"
   },
   "scripts": {
-    "example": "npx serve ./",
+    "example": "node example/main.js",
     "test": "NODE_OPTIONS=--experimental-vm-modules jest"
   },
   "devDependencies": {

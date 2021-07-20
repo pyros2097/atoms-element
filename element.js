@@ -3,72 +3,63 @@ import { html, render as litRender, directive, NodePart, AttributePart, Property
 const isBrowser = typeof window !== 'undefined';
 export { html, isBrowser };
 
-const constructionToken = Symbol();
+// Taken from emotion
+const murmur2 = (str) => {
+  var h = 0;
+  var k,
+    i = 0,
+    len = str.length;
+  for (; len >= 4; ++i, len -= 4) {
+    k = (str.charCodeAt(i) & 0xff) | ((str.charCodeAt(++i) & 0xff) << 8) | ((str.charCodeAt(++i) & 0xff) << 16) | ((str.charCodeAt(++i) & 0xff) << 24);
+    k = (k & 0xffff) * 0x5bd1e995 + (((k >>> 16) * 0xe995) << 16);
+    k ^= k >>> 24;
+    h = ((k & 0xffff) * 0x5bd1e995 + (((k >>> 16) * 0xe995) << 16)) ^ ((h & 0xffff) * 0x5bd1e995 + (((h >>> 16) * 0xe995) << 16));
+  }
+  switch (len) {
+    case 3:
+      h ^= (str.charCodeAt(i + 2) & 0xff) << 16;
+    case 2:
+      h ^= (str.charCodeAt(i + 1) & 0xff) << 8;
+    case 1:
+      h ^= str.charCodeAt(i) & 0xff;
+      h = (h & 0xffff) * 0x5bd1e995 + (((h >>> 16) * 0xe995) << 16);
+  }
+  h ^= h >>> 13;
+  h = (h & 0xffff) * 0x5bd1e995 + (((h >>> 16) * 0xe995) << 16);
+  return ((h ^ (h >>> 15)) >>> 0).toString(36);
+};
 
-class CSSResult {
-  constructor(cssText, safeToken) {
-    if (safeToken !== constructionToken) {
-      throw new Error('CSSResult is not constructable. Use `unsafeCSS` or `css` instead.');
+const hyphenate = (s) => s.replace(/[A-Z]|^ms/g, '-$&').toLowerCase();
+
+export const convertStyles = (prefix, obj, parentClassName, indent = '') => {
+  const className = parentClassName || prefix + '-' + murmur2(JSON.stringify(obj)).toString(36);
+  const cssText = Object.keys(obj).reduce((acc, key) => {
+    const value = obj[key];
+    if (typeof value === 'object') {
+      acc += '\n  ' + indent + convertStyles(prefix, value, key, indent + '  ').cssText;
+    } else {
+      acc += '  ' + indent + hyphenate(key) + ': ' + value + ';\n';
     }
-    this.cssText = cssText;
-  }
-
-  toString() {
-    return this.cssText;
-  }
-}
-
-/**
- * Wrap a value for interpolation in a [[`css`]] tagged template literal.
- *
- * This is unsafe because untrusted CSS text can be used to phone home
- * or exfiltrate data to an attacker controlled site. Take care to only use
- * this with trusted input.
- */
-export const unsafeCSS = (value) => {
-  return new CSSResult(String(value), constructionToken);
+    return acc;
+  }, `${parentClassName ? '' : '.'}${className} {\n`);
+  return { className, cssText: cssText + `\n${indent}}` };
 };
 
-const textFromCSSResult = (value) => {
-  if (value instanceof CSSResult) {
-    return value.cssText;
-  } else if (typeof value === 'number') {
-    return value;
-  } else {
-    throw new Error(
-      `Value passed to 'css' function must be a 'css' function result: ${value}. Use 'unsafeCSS' to pass non-literal values, but
-            take care to ensure page security.`,
-    );
-  }
+export const css = (obj) => {
+  Object.keys(obj).forEach((key) => {
+    const value = obj[key];
+    const { className, cssText } = convertStyles(key, value);
+    obj[key] = className;
+    obj[className] = cssText;
+  });
+  obj.toString = () => {
+    return Object.keys(obj).reduce((acc, key) => {
+      acc += key.includes('-') ? obj[key] + '\n\n' : '';
+      return acc;
+    }, '');
+  };
+  return obj;
 };
-
-/**
- * Template tag which which can be used with LitElement's [[LitElement.styles |
- * `styles`]] property to set element styles. For security reasons, only literal
- * string values may be used. To incorporate non-literal values [[`unsafeCSS`]]
- * may be used inside a template string part.
- */
-export const css = (strings, ...values) => {
-  const cssText = values.reduce((acc, v, idx) => acc + textFromCSSResult(v) + strings[idx + 1], strings[0]);
-  return new CSSResult(cssText, constructionToken);
-};
-
-// const cssSymbol = Symbol();
-// const hasCSSSymbol = (value: unknown): value is HasCSSSymbol => {
-//   return value && (value as HasCSSSymbol)[cssSymbol] != null;
-// };
-// const resolve = (value: unknown): string => {
-//   if (typeof value === "number") return String(value);
-//   if (hasCSSSymbol(value)) return value[cssSymbol];
-//   throw new TypeError(`${value} is not supported type.`);
-// };
-// export const css = (strings: readonly string[], ...values: unknown[]) => ({
-//   [cssSymbol]: strings
-//     .slice(1)
-//     .reduce((acc, s, i) => acc + resolve(values[i]) + s, strings[0]),
-// });
-// export const unsafeCSS = (css: string) => ({ [cssSymbol]: css });
-// root.appendChild(document.createElement("style")).textContent = cssStyle;
 
 const lastAttributeNameRegex =
   /([ \x09\x0a\x0c\x0d])([^\0-\x1F\x7F-\x9F "'>=/]+)([ \x09\x0a\x0c\x0d]*=[ \x09\x0a\x0c\x0d]*(?:[^ \x09\x0a\x0c\x0d"'`<>=]*|"[^"]*|'[^']*))$/;
@@ -275,7 +266,6 @@ export const array = validator('array', (innerType, context, data) => {
   }
 });
 
-const normalizeCss = `html{line-height:1.15;-webkit-text-size-adjust:100%}body{margin:0}main{display:block}h1{font-size:2em;margin:.67em 0}hr{box-sizing:content-box;height:0;overflow:visible}pre{font-family:monospace,monospace;font-size:1em}a{background-color:transparent}abbr[title]{border-bottom:none;text-decoration:underline;text-decoration:underline dotted}b,strong{font-weight:bolder}code,kbd,samp{font-family:monospace,monospace;font-size:1em}small{font-size:80%}sub,sup{font-size:75%;line-height:0;position:relative;vertical-align:baseline}sub{bottom:-.25em}sup{top:-.5em}img{border-style:none}button,input,optgroup,select,textarea{font-family:inherit;font-size:100%;line-height:1.15;margin:0}button,input{overflow:visible}button,select{text-transform:none}[type=button],[type=reset],[type=submit],button{-webkit-appearance:button}[type=button]::-moz-focus-inner,[type=reset]::-moz-focus-inner,[type=submit]::-moz-focus-inner,button::-moz-focus-inner{border-style:none;padding:0}[type=button]:-moz-focusring,[type=reset]:-moz-focusring,[type=submit]:-moz-focusring,button:-moz-focusring{outline:1px dotted ButtonText}fieldset{padding:.35em .75em .625em}legend{box-sizing:border-box;color:inherit;display:table;max-width:100%;padding:0;white-space:normal}progress{vertical-align:baseline}textarea{overflow:auto}[type=checkbox],[type=radio]{box-sizing:border-box;padding:0}[type=number]::-webkit-inner-spin-button,[type=number]::-webkit-outer-spin-button{height:auto}[type=search]{-webkit-appearance:textfield;outline-offset:-2px}[type=search]::-webkit-search-decoration{-webkit-appearance:none}::-webkit-file-upload-button{-webkit-appearance:button;font:inherit}details{display:block}summary{display:list-item}template{display:none}[hidden]{display:none}`;
 const fifo = (q) => q.shift();
 const filo = (q) => q.pop();
 const microtask = (flush) => () => queueMicrotask(flush);
@@ -292,7 +282,7 @@ const task = (flush) => {
 const registry = {};
 const BaseElement = isBrowser ? window.HTMLElement : class {};
 
-export default class AtomsElement extends BaseElement {
+export class AtomsElement extends BaseElement {
   static register() {
     registry[this.name] = this;
     if (isBrowser) {
@@ -419,11 +409,10 @@ export default class AtomsElement extends BaseElement {
     const result = render(template, this);
     if (isBrowser) {
       if (!this.stylesMounted) {
-        this.appendChild(document.createElement('style')).textContent = normalizeCss + '\n' + this.constructor.styles.toString();
+        this.appendChild(document.createElement('style')).textContent = this.constructor.styles.toString();
         this.stylesMounted = true;
       }
     } else {
-      // ${normalizeCss}
       return `
         ${result}
         <style>
@@ -433,3 +422,32 @@ export default class AtomsElement extends BaseElement {
     }
   }
 }
+
+const createElement = ({ name, attrTypes, stateTypes, computedTypes, styles, render }) => {
+  const Element = class extends AtomsElement {
+    static name = name();
+
+    static attrTypes = attrTypes();
+
+    static stateTypes = stateTypes();
+
+    static computedTypes = computedTypes();
+
+    static styles = styles;
+
+    constructor(ssrAttributes) {
+      super(ssrAttributes);
+    }
+    render() {
+      return render({
+        attrs: this.attrs,
+        state: this.state,
+        computed: this.computed,
+      });
+    }
+  };
+  Element.register();
+  return { name, attrTypes, stateTypes, computedTypes, styles, render };
+};
+
+export default createElement;
