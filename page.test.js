@@ -1,18 +1,17 @@
 import { expect, test } from '@jest/globals';
 import { html, css } from './element.js';
-import createPage from './page.js';
+import { createPage } from './page.js';
 
 test('Page', () => {
   const route = () => {
     const langPart = this.config.lang === 'en' ? '' : `/${this.config.lang}`;
     return `${langPart}`;
   };
-  const styles = () =>
-    css({
-      div: {
-        color: 'red',
-      },
-    });
+  const styles = css({
+    div: {
+      color: 'red',
+    },
+  });
   const head = ({ config }) => {
     return html`
       <title>${config.title}</title>
