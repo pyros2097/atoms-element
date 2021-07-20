@@ -1,5 +1,5 @@
 import { expect, test, jest } from '@jest/globals';
-import AtomsElement, { html, render, number, boolean, string, array, object, unsafeHTML, css, classMap } from './element.js';
+import { AtomsElement, html, render, number, boolean, string, array, object, unsafeHTML, css, classMap } from './element.js';
 
 global.__DEV = true;
 
@@ -130,6 +130,60 @@ test('array', () => {
   spy.mockRestore();
 });
 
+test('css', () => {
+  const styles = css({
+    button: {
+      color: 'magenta',
+      fontSize: '10px',
+      '@media screen and (min-width:40em)': {
+        fontSize: '64px',
+      },
+      ':hover': {
+        color: 'black',
+      },
+      '@media screen and (min-width:56em)': {
+        ':hover': {
+          color: 'navy',
+        },
+      },
+    },
+    container: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+  });
+  expect(styles.toString()).toEqual(`.button-1t9ijgh {
+  color: magenta;
+  font-size: 10px;
+
+  @media screen and (min-width:40em) {
+    font-size: 64px;
+
+  }
+  :hover {
+    color: black;
+
+  }
+  @media screen and (min-width:56em) {
+
+    :hover {
+      color: navy;
+
+    }
+  }
+}
+
+.container-1dvem0h {
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+
+}
+
+`);
+});
+
 test('render', async () => {
   const age = 1;
   const data = { name: '123', address: { street: '1' } };
@@ -258,11 +312,11 @@ test('AtomsElement', async () => {
         }),
     };
 
-    static styles = css`
-      div {
-        color: red;
-      }
-    `;
+    static styles = css({
+      div: {
+        color: 'red',
+      },
+    });
 
     render() {
       const {
@@ -301,11 +355,12 @@ test('AtomsElement', async () => {
         </div>
       
         <style>
-        
-      div {
-        color: red;
-      }
-    
+        .div-1gao8uk {
+  color: red;
+
+}
+
+
         </style>
       `);
 });

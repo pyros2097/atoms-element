@@ -1,57 +1,38 @@
 import parse5 from 'parse5';
-import AtomsElement, { render } from './element.js';
+import { AtomsElement, render } from './element.js';
 
-export default class Page {
-  constructor({ config, data, item, headScript, bodyScript }) {
-    this.config = config;
-    this.data = data;
-    this.item = item;
-    this.headScript = headScript;
-    this.bodyScript = bodyScript;
-  }
-
-  find(node) {
-    for (const child of node.childNodes) {
-      if (AtomsElement.getElement(child.tagName)) {
-        const Clazz = AtomsElement.getElement(child.tagName);
-        const instance = new Clazz(child.attrs);
-        const res = instance.renderTemplate();
-        const frag = parse5.parseFragment(res);
-        child.childNodes.push(...frag.childNodes);
-        child.childNodes.push({
-          nodeName: 'style',
-          tagName: 'style',
-          attrs: [],
-          childNodes: [
-            {
-              nodeName: '#text',
-              value: Clazz.styles.toString(),
-            },
-          ],
-        });
-      }
-      if (child.childNodes) {
-        this.find(child);
-      }
+const find = (node) => {
+  for (const child of node.childNodes) {
+    if (AtomsElement.getElement(child.tagName)) {
+      const Clazz = AtomsElement.getElement(child.tagName);
+      const instance = new Clazz(child.attrs);
+      const res = instance.renderTemplate();
+      const frag = parse5.parseFragment(res);
+      child.childNodes.push(...frag.childNodes);
+    }
+    if (child.childNodes) {
+      find(child);
     }
   }
+};
 
-  ssr(template) {
-    const text = render(template);
-    const h = parse5.parseFragment(text);
-    this.find(h);
-    return parse5.serialize(h);
-  }
+const ssr = (template) => {
+  const text = render(template);
+  const h = parse5.parseFragment(text);
+  find(h);
+  return parse5.serialize(h);
+};
 
-  render() {
+const createPage = ({ route, datapaths, head, body, styles }) => {
+  return ({ config, data, item, headScript, bodyScript }) => {
     const isProd = process.env.NODE_ENV === 'production';
-    const props = { config: this.config, data: this.data, item: this.item };
-    const headHtml = this.ssr(this.head(props));
-    const stylesCss = this.styles(props);
-    const bodyHtml = this.ssr(this.body(props));
+    const props = { config, data, item };
+    const headHtml = ssr(head(props));
+    const bodyHtml = ssr(body(props));
+    const stylesCss = styles(props);
     return `
       <!DOCTYPE html>
-      <html lang="${this.config.lang}">
+      <html lang="${config.lang}">
         <head>
           <meta charset="utf-8" />
           <meta http-equiv="x-ua-compatible" content="ie=edge" />
@@ -61,21 +42,23 @@ export default class Page {
           <link rel="icon" type="image/png" href="/assets/icon.png" />
           ${headHtml}
           <style>
-            ${stylesCss}
+            ${stylesCss.toString()}
           </style>
-          ${this.headScript}
+          ${headScript}
         </head>
         <body>
           ${bodyHtml}
           <script>
             window.__DEV__ = ${!isProd};
-            window.config = ${JSON.stringify(this.config)};
-            window.data = ${JSON.stringify(this.data)};
-            window.item = ${JSON.stringify(this.item)};
+            window.config = ${JSON.stringify(config)};
+            window.data = ${JSON.stringify(data)};
+            window.item = ${JSON.stringify(item)};
           </script>
-          ${this.bodyScript}
+          ${bodyScript}
         </body>
       </html>
   `;
-  }
-}
+  };
+};
+
+export default createPage;

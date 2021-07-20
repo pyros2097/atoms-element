@@ -1,19 +1,5 @@
 import { Config } from './page';
 
-export declare type Destructor = () => void | undefined;
-export declare type EffectCallback = () => (void | Destructor);
-export declare type SetStateAction<S> = S | ((prevState: S) => S);
-export declare type Dispatch<A> = (value: A) => void;
-export declare type DispatchWithoutAction = () => void;
-export declare type DependencyList = ReadonlyArray<any>;
-export declare type Reducer<S, A> = (prevState: S, action: A) => S;
-export declare type ReducerWithoutAction<S> = (prevState: S) => S;
-export declare type ReducerState<R extends Reducer<any, any>> = R extends Reducer<infer S, any> ? S : never;
-export declare type ReducerAction<R extends Reducer<any, any>> = R extends Reducer<any, infer A> ? A : never;
-export declare type ReducerStateWithoutAction<R extends ReducerWithoutAction<any>> = R extends ReducerWithoutAction<infer S> ? S : never;
-export declare interface MutableRefObject<T> {
-  current: T | null | undefined;
-}
 export declare type Location = {
   readonly ancestorOrigins: DOMStringList;
   hash: string;
@@ -38,15 +24,24 @@ export default class AtomsElement {
   config: Config;
   location: Location;
   attrs: {[key: string]: any};
+  state: {[key: string]: any};
+  computed: {[key: string]: any};
   styles: () => string;
-  useState: <S>(initialState: S | (() => S)) => [S, Dispatch<SetStateAction<S>>];
-  useEffect: (effect: EffectCallback, deps?: DependencyList) => void;
-  useLayoutEffect: (effect: EffectCallback, deps?: DependencyList) => void;
-  useReducer: <R extends ReducerWithoutAction<any>, I>(
-    reducer: R,
-    initializerArg: I,
-    initializer: (arg: I) => ReducerStateWithoutAction<R>
-  ) => [ReducerStateWithoutAction<R>, DispatchWithoutAction];
-  useCallback: <T extends (...args: any[]) => any>(callback: T, deps: DependencyList) => T;
-  useMemo: <T>(factory: () => T, deps: DependencyList | undefined) => T;
 }
+
+// declare type Colors = 'red' | 'purple' | 'blue' | 'green';
+// declare type Luminance = 100 | 200 | 300 | 400 | 500 | 600 | 700 | 800 | 900;
+// declare type BgColor = `bg-${Colors}-${Luminance}`;
+// declare type Distance = 0.5 | 1 | 1.5 | 2 | 2.5 | 3 | 3.5 | 4 | 5 | 6 | 7 | 8 | 9 | 10;
+// declare type Breakpoints = 'xs:' | 'sm:' | 'md:' | 'lg:' | 'xl:' | '';
+// declare type Space = `${Breakpoints}space-${'x' | 'y'}-${Distance}`;
+// declare type ValidClass = Space | BgColor;
+// declare type Tailwind<S> = S extends `${infer Class} ${infer Rest}` ? Class extends ValidClass ? `${Class} ${Tailwind<Rest>}` : never : S extends `${infer Class}` ? Class extends ValidClass ? S : never : never;
+// declare function doSomethingWithTwClass<S>(cls: Tailwind<S>): Tailwind<S>;
+// declare const bad: never;
+// declare const bad2: never;
+// declare const bad3: never;
+// declare const bad4: never;
+// declare const good: "bg-red-400 space-x-4 md:space-x-8";
+// declare const good2: "bg-red-400 space-x-4";
+// declare const good3: "space-x-1.5 bg-blue-200";
