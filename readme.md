@@ -3,11 +3,10 @@
 [![Version](https://img.shields.io/npm/v/atoms-element?style=flat-square&color=blue)](https://www.npmjs.com/package/atoms-element)
 ![Test](https://github.com/pyros2097/atoms-element/actions/workflows/main.yml/badge.svg)
 
-A simple web component library for defining your custom elements. It works on both client and server. It supports hooks and follows the same
-principles of react. Data props are attributes on the custom element by default so its easier to debug and functions/handlers are attached to the element.
+A simple web component library for defining your custom elements. It works on both client and server. It follows the same principles of react. Data props are attributes on the custom element by default so its easier to debug and functions/handlers are attached to the element.
 
 I initially started researching if it was possible to server render web components but found out not one framework supported it. I liked using
-[haunted](https://github.com/matthewp/haunted) as it was react like with hooks but was lost on how to implement server rendering. Libraries like
+[haunted](https://github.com/matthewp/haunted) as it was react-like with hooks but was lost on how to implement server rendering. Libraries like
 JSDOM couldn't be of use since it didn't support web components and I didn't want to use puppeteer for something like this.
 
 After a year of thinking about it and researching it I found out this awesome framework [Tonic](https://github.com/optoolco/tonic).
