@@ -31,10 +31,10 @@ export const getLocation = () => Location;
 
 export type CreateElementProps = {
   name: () => string;
-  attrTypes: () => {[key: string]: any};
-  stateTypes: () => {[key: string]: any};
-  computedTypes: () => {[key: string]: any};
-  styles: {[key: string]: any};
+  attrTypes?: () => {[key: string]: any};
+  stateTypes?: () => {[key: string]: any};
+  computedTypes?: () => {[key: string]: any};
+  styles?: {[key: string]: any};
   render:  () => any
 }
 
