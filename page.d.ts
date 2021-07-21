@@ -15,12 +15,27 @@ export declare type Config = {
 export declare type Data = any;
 export declare type Item = any;
 
-export class Page {
+export type find = (node: any) => void;
+export type ssr = (template: any) => string;
+
+export type Props = {
   config: Config;
   data: Data;
   item: Item;
-  route: () => string;
-  styles: () => string;
-  head: () => string;
-  body: () => string;
 }
+export type Handler = (props: Props) => string;
+export type CreatePageProps = {
+  route: Handler;
+  datapaths: Handler;
+  head: Handler;
+  body: Handler;
+  styles: {[key: string]: any};
+}
+export type PageRenderProps = {
+  config: Config;
+  data: Data;
+  item: Item; 
+  headScript: string; 
+  bodyScript: string;
+}
+export const createPage = (props: CreatePageProps) => (props: PageRenderProps) => string;

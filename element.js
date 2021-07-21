@@ -422,6 +422,8 @@ export class AtomsElement extends BaseElement {
     }
   }
 }
+export const getConfig = () => (isBrowser ? window.config : global.config);
+export const getLocation = () => (isBrowser ? window.location : global.location);
 
 export const createElement = ({ name, attrTypes, stateTypes, computedTypes, styles, render }) => {
   const Element = class extends AtomsElement {

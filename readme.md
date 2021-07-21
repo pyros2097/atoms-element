@@ -16,7 +16,7 @@ After going through all these libraries,
 
 1. [lit-html](https://github.com/lit/lit)
 2. [lit-html-server](https://github.com/popeindustries/lit-html-server)
-3. [haunted](hhttps://github.com/matthewp/haunted)
+3. [haunted](https://github.com/matthewp/haunted)
 4. [Tonic](https://github.com/optoolco/tonic)
 5. [Atomico](https://github.com/atomicojs/atomico)
 6. [fuco](https://github.com/wtnbass/fuco)
