@@ -32,29 +32,38 @@ const murmur2 = (str) => {
 const hyphenate = (s) => s.replace(/[A-Z]|^ms/g, '-$&').toLowerCase();
 
 export const convertStyles = (prefix, obj, parentClassName, indent = '') => {
-  const className = parentClassName || prefix + '-' + murmur2(JSON.stringify(obj)).toString(36);
-  const cssText = Object.keys(obj).reduce((acc, key) => {
-    const value = obj[key];
-    if (typeof value === 'object') {
-      acc += '\n  ' + indent + convertStyles(prefix, value, key, indent + '  ').cssText;
-    } else {
-      acc += '  ' + indent + hyphenate(key) + ': ' + value + ';\n';
-    }
-    return acc;
-  }, `${parentClassName ? '' : '.'}${className} {\n`);
-  return { className, cssText: cssText + `\n${indent}}` };
+  const isGlobal = parentClassName === '__global__';
+  const className = isGlobal ? '' : parentClassName || prefix + '-' + murmur2(JSON.stringify(obj)).toString(36);
+  const cssText = Object.keys(obj).reduce(
+    (acc, key) => {
+      const value = obj[key];
+      if (typeof value === 'object') {
+        acc += '\n  ' + indent + convertStyles(prefix, value, key, indent + '  ').cssText;
+      } else {
+        acc += '  ' + indent + hyphenate(key) + ': ' + value + ';\n';
+      }
+      return acc;
+    },
+    isGlobal ? '' : `${parentClassName ? '' : '.'}${className} {\n`,
+  );
+  return { className, cssText: cssText + `\n${indent}${isGlobal ? '' : '}'}` };
 };
 
 export const css = (obj) => {
   Object.keys(obj).forEach((key) => {
     const value = obj[key];
-    const { className, cssText } = convertStyles(key, value);
-    obj[key] = className;
-    obj[className] = cssText;
+    if (key === '__global__') {
+      const { cssText } = convertStyles(key, value, '__global__');
+      obj[key] = cssText;
+    } else {
+      const { className, cssText } = convertStyles(key, value);
+      obj[key] = className;
+      obj[className] = cssText;
+    }
   });
-  obj.toString = () => {
+  obj.render = () => {
     return Object.keys(obj).reduce((acc, key) => {
-      acc += key.includes('-') ? obj[key] + '\n\n' : '';
+      acc += key.includes('-') || key === '__global__' ? obj[key] + '\n\n' : '';
       return acc;
     }, '');
   };
@@ -408,17 +417,21 @@ export class AtomsElement extends BaseElement {
     const template = this.render();
     const result = render(template, this);
     if (isBrowser) {
-      if (!this.stylesMounted) {
-        this.appendChild(document.createElement('style')).textContent = this.constructor.styles.toString();
+      if (!this.stylesMounted && this.constructor.styles) {
+        this.appendChild(document.createElement('style')).textContent = this.constructor.styles.render();
         this.stylesMounted = true;
       }
     } else {
-      return `
-        ${result}
-        <style>
-        ${this.constructor.styles.toString()}
-        </style>
-      `;
+      if (this.constructor.styles) {
+        return `
+          ${result}
+          <style>
+          ${this.constructor.styles.render()}
+          </style>
+        `;
+      } else {
+        return result;
+      }
     }
   }
 }
@@ -435,7 +448,7 @@ export const createElement = ({ name, attrTypes, stateTypes, computedTypes, styl
 
     static computedTypes = computedTypes ? computedTypes() : {};
 
-    static styles = styles ? styles : css({});
+    static styles = styles;
 
     constructor(ssrAttributes) {
       super(ssrAttributes);

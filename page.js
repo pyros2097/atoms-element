@@ -41,7 +41,7 @@ export const createPage = ({ route, datapaths, head, body, styles }) => {
           <link rel="icon" type="image/png" href="/assets/icon.png" />
           ${headHtml}
           <style>
-            ${styles.toString()}
+            ${styles.render()}
           </style>
           ${headScript}
         </head>
