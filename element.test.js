@@ -1,5 +1,5 @@
 import { expect, test, jest } from '@jest/globals';
-import { AtomsElement, html, render, number, boolean, string, array, object, unsafeHTML, css, classMap } from './element.js';
+import { AtomsElement, html, render, number, boolean, string, array, object, unsafeHTML, css, classMap, createElement } from './element.js';
 
 global.__DEV = true;
 
@@ -132,6 +132,11 @@ test('array', () => {
 
 test('css', () => {
   const styles = css({
+    __global__: {
+      html: {
+        fontSize: '16px',
+      },
+    },
     button: {
       color: 'magenta',
       fontSize: '10px',
@@ -153,7 +158,14 @@ test('css', () => {
       justifyContent: 'center',
     },
   });
-  expect(styles.toString()).toEqual(`.button-1t9ijgh {
+  expect(styles.render()).toEqual(`
+  html {
+    font-size: 16px;
+
+  }
+
+
+.button-1t9ijgh {
   color: magenta;
   font-size: 10px;
 
@@ -346,7 +358,7 @@ test('AtomsElement', async () => {
   expect(AppItem.observedAttributes).toEqual(['perpage', 'address']);
   const res = instance.renderTemplate();
   expect(res).toEqual(`
-        
+          
         <div perPage="1">
           <p>street: 123</p>
           <p>count: 0</p>
@@ -354,13 +366,26 @@ test('AtomsElement', async () => {
           <div><p>render item 1</p></div>
         </div>
       
-        <style>
-        .div-1gao8uk {
+          <style>
+          .div-1gao8uk {
   color: red;
 
 }
 
 
-        </style>
-      `);
+          </style>
+        `);
+});
+
+test('createElement ', async () => {
+  createElement({
+    name: () => 'base-element',
+    render: () => {
+      return html` <div></div> `;
+    },
+  });
+  const Clazz = AtomsElement.getElement('base-element');
+  const instance = new Clazz();
+  const res = instance.renderTemplate();
+  expect(res).toEqual(` <div></div> `);
 });

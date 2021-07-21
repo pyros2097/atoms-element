@@ -1,5 +1,6 @@
 import { html, css } from '../element.js';
 import { createPage } from '../page.js';
+import { __global__ } from './styles.js';
 import './app-counter.js';
 
 const route = () => {
@@ -7,6 +8,7 @@ const route = () => {
 };
 
 const styles = css({
+  __global__,
   center: {
     display: 'flex',
     flex: 1,
@@ -16,10 +18,7 @@ const styles = css({
 });
 
 const head = ({ config }) => {
-  return html`
-    <title>${config.title}</title>
-    <link href="/styles.css" rel="stylesheet" as="style" />
-  `;
+  return html` <title>${config.title}</title> `;
 };
 
 const body = () => {
