@@ -429,13 +429,13 @@ export const createElement = ({ name, attrTypes, stateTypes, computedTypes, styl
   const Element = class extends AtomsElement {
     static name = name();
 
-    static attrTypes = attrTypes();
+    static attrTypes = attrTypes ? attrTypes() : {};
 
-    static stateTypes = stateTypes();
+    static stateTypes = stateTypes ? stateTypes() : {};
 
-    static computedTypes = computedTypes();
+    static computedTypes = computedTypes ? computedTypes() : {};
 
-    static styles = styles;
+    static styles = styles ? styles : css({});
 
     constructor(ssrAttributes) {
       super(ssrAttributes);
