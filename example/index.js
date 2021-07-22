@@ -1,5 +1,4 @@
-import { html, css } from '../element.js';
-import { createPage } from '../page.js';
+import { createPage, html, css } from '../index.js';
 import { pageStyles } from './styles.js';
 import './app-counter.js';
 

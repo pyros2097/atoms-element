@@ -9,7 +9,7 @@ const __dirname = dirname(__filename);
 
 const port = process.argv[2] || 3000;
 const srcMap = {
-  '/element.js': `${__dirname}/../element.js`,
+  '/index.js': `${__dirname}/../index.js`,
   '/lit-html.js': `${__dirname}/../lit-html.js`,
   '/styles.js': `${__dirname}/styles.js`,
   '/app-counter.js': `${__dirname}/app-counter.js`,
