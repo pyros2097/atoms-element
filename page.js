@@ -1,5 +1,5 @@
 import parse5 from 'parse5';
-import { AtomsElement, render } from './element.js';
+import { AtomsElement, render, getTWStyleSheet } from './element.js';
 
 export const find = (node) => {
   for (const child of node.childNodes) {
@@ -28,7 +28,8 @@ export const createPage = ({ route, datapaths, head, body, styles }) => {
     const isProd = process.env.NODE_ENV === 'production';
     const props = { config, data, item };
     const headHtml = ssr(head(props));
-    const bodyHtml = ssr(body(props));
+    const bodyTemplate = body(props);
+    const bodyHtml = ssr(bodyTemplate);
     return `
       <!DOCTYPE html>
       <html lang="${config.lang}">
@@ -41,7 +42,7 @@ export const createPage = ({ route, datapaths, head, body, styles }) => {
           <link rel="icon" type="image/png" href="/assets/icon.png" />
           ${headHtml}
           <style>
-            ${styles.render()}
+            ${getTWStyleSheet(bodyTemplate)}
           </style>
           ${headScript}
         </head>

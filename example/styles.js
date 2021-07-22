@@ -1,4 +1,4 @@
-export const __global__ = {
+export const pageStyles = {
   '*, ::before, ::after': {
     boxSizing: 'border-box',
     borderWidth: '0',

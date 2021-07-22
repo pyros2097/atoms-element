@@ -29,7 +29,6 @@ export type CreatePageProps = {
   datapaths: Handler;
   head: Handler;
   body: Handler;
-  styles: {[key: string]: any};
 }
 export type PageRenderProps = {
   config: Config;
