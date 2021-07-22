@@ -24,7 +24,6 @@ export class AtomsElement {
   attrs: {[key: string]: any};
   state: {[key: string]: any};
   computed: {[key: string]: any};
-  styles: {[key: string]: any};
 }
 export const getConfig = () => Config;
 export const getLocation = () => Location;
@@ -34,7 +33,6 @@ export type CreateElementProps = {
   attrTypes?: () => {[key: string]: any};
   stateTypes?: () => {[key: string]: any};
   computedTypes?: () => {[key: string]: any};
-  styles?: {[key: string]: any};
   render:  () => any
 }
 

@@ -3,71 +3,402 @@ import { html, render as litRender, directive, NodePart, AttributePart, Property
 const isBrowser = typeof window !== 'undefined';
 export { html, isBrowser };
 
-// Taken from emotion
-const murmur2 = (str) => {
-  var h = 0;
-  var k,
-    i = 0,
-    len = str.length;
-  for (; len >= 4; ++i, len -= 4) {
-    k = (str.charCodeAt(i) & 0xff) | ((str.charCodeAt(++i) & 0xff) << 8) | ((str.charCodeAt(++i) & 0xff) << 16) | ((str.charCodeAt(++i) & 0xff) << 24);
-    k = (k & 0xffff) * 0x5bd1e995 + (((k >>> 16) * 0xe995) << 16);
-    k ^= k >>> 24;
-    h = ((k & 0xffff) * 0x5bd1e995 + (((k >>> 16) * 0xe995) << 16)) ^ ((h & 0xffff) * 0x5bd1e995 + (((h >>> 16) * 0xe995) << 16));
-  }
-  switch (len) {
-    case 3:
-      h ^= (str.charCodeAt(i + 2) & 0xff) << 16;
-    case 2:
-      h ^= (str.charCodeAt(i + 1) & 0xff) << 8;
-    case 1:
-      h ^= str.charCodeAt(i) & 0xff;
-      h = (h & 0xffff) * 0x5bd1e995 + (((h >>> 16) * 0xe995) << 16);
-  }
-  h ^= h >>> 13;
-  h = (h & 0xffff) * 0x5bd1e995 + (((h >>> 16) * 0xe995) << 16);
-  return ((h ^ (h >>> 15)) >>> 0).toString(36);
-};
-
 const hyphenate = (s) => s.replace(/[A-Z]|^ms/g, '-$&').toLowerCase();
 
-export const convertStyles = (prefix, obj, parentClassName, indent = '') => {
-  const isGlobal = parentClassName === '__global__';
-  const className = isGlobal ? '' : parentClassName || prefix + '-' + murmur2(JSON.stringify(obj)).toString(36);
-  const cssText = Object.keys(obj).reduce(
-    (acc, key) => {
-      const value = obj[key];
-      if (typeof value === 'object') {
-        acc += '\n  ' + indent + convertStyles(prefix, value, key, indent + '  ').cssText;
-      } else {
-        acc += '  ' + indent + hyphenate(key) + ': ' + value + ';\n';
-      }
-      return acc;
-    },
-    isGlobal ? '' : `${parentClassName ? '' : '.'}${className} {\n`,
-  );
-  return { className, cssText: cssText + `\n${indent}${isGlobal ? '' : '}'}` };
+export const css = (obj, isChild = false, indent = '') => {
+  const cssText = Object.keys(obj).reduce((acc, key) => {
+    const value = obj[key];
+    acc += !isChild ? `${key} {\n` : '';
+    if (typeof value === 'object') {
+      acc += '\n  ' + indent + css(value, true, indent + '  ');
+    } else {
+      acc += '  ' + indent + hyphenate(key) + ': ' + value + ';\n';
+    }
+    acc += !isChild ? `\n}\n` : '';
+    return acc;
+  }, '');
+  return cssText;
 };
 
-export const css = (obj) => {
-  Object.keys(obj).forEach((key) => {
-    const value = obj[key];
-    if (key === '__global__') {
-      const { cssText } = convertStyles(key, value, '__global__');
-      obj[key] = cssText;
-    } else {
-      const { className, cssText } = convertStyles(key, value);
-      obj[key] = className;
-      obj[className] = cssText;
+// const width = Dimensions.get('screen').width;
+// let bp = '';
+// if (width >= 640 && width <= 768) {
+//   bp = 'sm';
+// } else if (width >= 768 && width < 1024) {
+//   bp = 'md';
+// } else if (width >= 1024 && width < 1280) {
+//   bp = 'lg';
+// } else if (width >= 1280 && width < 1536) {
+//   bp = 'xl';
+// } else if (width >= 1536) {
+//   bp = '2xl';
+// }
+
+const colors = {
+  keys: {
+    bg: 'backgroundColor',
+    text: 'color',
+    b: 'borderColor',
+    bl: 'borderLeftColor',
+    br: 'borderRightColor',
+    bt: 'borderTopColor',
+    bb: 'borderBottomColor',
+  },
+  values: {
+    transparent: 'transparent',
+    current: 'currentColor',
+    black: 'rgba(0, 0, 0, 1)',
+    white: 'rgba(255, 255, 255, 1)',
+    'gray-50': 'rgba(249, 250, 251, 1)',
+    'gray-100': 'rgba(243, 244, 246, 1)',
+    'gray-200': 'rgba(229, 231, 235, 1)',
+    'gray-300': 'rgba(209, 213, 219, 1)',
+    'gray-400': 'rgba(156, 163, 175, 1)',
+    'gray-500': 'rgba(107, 114, 128, 1)',
+    'gray-600': 'rgba(75, 85, 99, 1)',
+    'gray-700': 'rgba(55, 65, 81, 1)',
+    'gray-800': 'rgba(31, 41, 55, 1)',
+    'gray-900': 'rgba(17, 24, 39, 1)',
+    'red-50': 'rgba(254, 242, 242, 1)',
+    'red-100': 'rgba(254, 226, 226, 1)',
+    'red-200': 'rgba(254, 202, 202, 1)',
+    'red-300': 'rgba(252, 165, 165, 1)',
+    'red-400': 'rgba(248, 113, 113, 1)',
+    'red-500': 'rgba(239, 68, 68, 1)',
+    'red-600': 'rgba(220, 38, 38, 1)',
+    'red-700': 'rgba(185, 28, 28, 1)',
+    'red-800': 'rgba(153, 27, 27, 1)',
+    'red-900': 'rgba(127, 29, 29, 1)',
+    'yellow-50': 'rgba(255, 251, 235, 1)',
+    'yellow-100': 'rgba(254, 243, 199, 1)',
+    'yellow-200': 'rgba(253, 230, 138, 1)',
+    'yellow-300': 'rgba(252, 211, 77, 1)',
+    'yellow-400': 'rgba(251, 191, 36, 1)',
+    'yellow-500': 'rgba(245, 158, 11, 1)',
+    'yellow-600': 'rgba(217, 119, 6, 1)',
+    'yellow-700': 'rgba(180, 83, 9, 1)',
+    'yellow-800': 'rgba(146, 64, 14, 1)',
+    'yellow-900': 'rgba(120, 53, 15, 1)',
+    'green-50': 'rgba(236, 253, 245, 1)',
+    'green-100': 'rgba(209, 250, 229, 1)',
+    'green-200': 'rgba(167, 243, 208, 1)',
+    'green-300': 'rgba(110, 231, 183, 1)',
+    'green-400': 'rgba(52, 211, 153, 1)',
+    'green-500': 'rgba(16, 185, 129, 1)',
+    'green-600': 'rgba(5, 150, 105, 1)',
+    'green-700': 'rgba(4, 120, 87, 1)',
+    'green-800': 'rgba(6, 95, 70, 1)',
+    'green-900': 'rgba(6, 78, 59, 1)',
+    'blue-50': 'rgba(239, 246, 255, 1)',
+    'blue-100': 'rgba(219, 234, 254, 1)',
+    'blue-200': 'rgba(191, 219, 254, 1)',
+    'blue-300': 'rgba(147, 197, 253, 1)',
+    'blue-400': 'rgba(96, 165, 250, 1)',
+    'blue-500': 'rgba(59, 130, 246, 1)',
+    'blue-600': 'rgba(37, 99, 235, 1)',
+    'blue-700': 'rgba(29, 78, 216, 1)',
+    'blue-800': 'rgba(30, 64, 175, 1)',
+    'blue-900': 'rgba(30, 58, 138, 1)',
+    'indigo-50': 'rgba(238, 242, 255, 1)',
+    'indigo-100': 'rgba(224, 231, 255, 1)',
+    'indigo-200': 'rgba(199, 210, 254, 1)',
+    'indigo-300': 'rgba(165, 180, 252, 1)',
+    'indigo-400': 'rgba(129, 140, 248, 1)',
+    'indigo-500': 'rgba(99, 102, 241, 1)',
+    'indigo-600': 'rgba(79, 70, 229, 1)',
+    'indigo-700': 'rgba(67, 56, 202, 1)',
+    'indigo-800': 'rgba(55, 48, 163, 1)',
+    'indigo-900': 'rgba(49, 46, 129, 1)',
+    'purple-50': 'rgba(245, 243, 255, 1)',
+    'purple-100': 'rgba(237, 233, 254, 1)',
+    'purple-200': 'rgba(221, 214, 254, 1)',
+    'purple-300': 'rgba(196, 181, 253, 1)',
+    'purple-400': 'rgba(167, 139, 250, 1)',
+    'purple-500': 'rgba(139, 92, 246, 1)',
+    'purple-600': 'rgba(124, 58, 237, 1)',
+    'purple-700': 'rgba(109, 40, 217, 1)',
+    'purple-800': 'rgba(91, 33, 182, 1)',
+    'purple-900': 'rgba(76, 29, 149, 1)',
+    'pink-50': 'rgba(253, 242, 248, 1)',
+    'pink-100': 'rgba(252, 231, 243, 1)',
+    'pink-200': 'rgba(251, 207, 232, 1)',
+    'pink-300': 'rgba(249, 168, 212, 1)',
+    'pink-400': 'rgba(244, 114, 182, 1)',
+    'pink-500': 'rgba(236, 72, 153, 1)',
+    'pink-600': 'rgba(219, 39, 119, 1)',
+    'pink-700': 'rgba(190, 24, 93, 1)',
+    'pink-800': 'rgba(157, 23, 77, 1)',
+    'pink-900': 'rgba(131, 24, 67, 1)',
+  },
+};
+
+const spacing = {
+  keys: {
+    mr: 'marginRight',
+    ml: 'marginLeft',
+    mt: 'marginTop',
+    mb: 'marginBottom',
+    mx: ['marginLeft', 'marginRight'],
+    my: ['marginTop', 'marginBottom'],
+    m: 'margin',
+    pr: 'paddingRight',
+    pl: 'paddingLeft',
+    pt: 'paddingTop',
+    pb: 'paddingBottom',
+    px: ['paddingLeft', 'paddingRight'],
+    py: ['paddingTop', 'paddingBottom'],
+    p: 'padding',
+  },
+  values: {
+    auto: 'auto',
+    0: '0px',
+    px: '1px',
+    0.5: '0.125rem',
+    1: '0.25rem',
+    1.5: '0.375rem',
+    2: '0.5rem',
+    2.5: '0.625rem',
+    3: '0.75rem',
+    3.5: '0.875rem',
+    4: '1rem',
+    5: '1.25rem',
+    6: '1.5rem',
+    7: '1.75rem',
+    8: '2rem',
+    9: '2.25rem',
+    10: '2.5rem',
+    11: '2.75rem',
+    12: '3rem',
+    14: '3.5rem',
+    16: '4rem',
+    20: '5rem',
+    24: '6rem',
+    28: '7rem',
+    32: '8rem',
+    36: '9rem',
+    40: '10rem',
+    44: '11rem',
+    48: '12rem',
+    52: '13rem',
+    56: '14rem',
+    60: '15rem',
+    64: '16rem',
+    72: '18rem',
+    80: '20rem',
+    96: '24rem',
+  },
+};
+
+// rounded-none	border-radius: 0px;
+// rounded-sm	border-radius: 0.125rem;
+// rounded	border-radius: 0.25rem;
+// rounded-md	border-radius: 0.375rem;
+// rounded-lg	border-radius: 0.5rem;
+// rounded-xl	border-radius: 0.75rem;
+// rounded-2xl	border-radius: 1rem;
+// rounded-3xl	border-radius: 1.5rem;
+// rounded-full	border-radius: 9999px;
+// rounded-t-
+// rounded-r
+// rounded-b
+// rounded-l
+// rounded-tl
+// rounded-tr
+// rounded-br
+// rounded-bl
+
+const borders = {
+  keys: {
+    bw: 'borderWidth',
+    bwl: 'borderLeftWidth',
+    bwr: 'borderRightWidth',
+    bwt: 'borderTopWidth',
+    bwb: 'borderBottomWidth',
+  },
+  values: {
+    '': '1px',
+    0: '0px',
+    2: '2px',
+    4: '4px',
+    8: '8px',
+  },
+};
+
+const sizes = {
+  keys: {
+    h: 'height',
+    w: 'width',
+    minh: 'minHeight',
+    minw: 'minWidth',
+    maxh: 'maxHeight',
+    maxw: 'maxWidth',
+  },
+  values: {
+    '1/2': 1 / 1,
+    '1/4': 1 / 4,
+    '2/4': 2 / 4,
+    '3/4': 3 / 4,
+    '1/5': 1 / 5,
+    '2/5': 2 / 5,
+    '3/5': 3 / 5,
+    '4/5': 4 / 5,
+    '1/6': 1 / 6,
+    '2/6': 2 / 6,
+    '3/6': 3 / 6,
+    '4/6': 4 / 6,
+    '5/6': 5 / 6,
+    '1/12': 1 / 12,
+    '2/12': 2 / 12,
+    '3/12': 3 / 12,
+    '4/12': 4 / 12,
+    '5/12': 5 / 12,
+    '6/12': 6 / 12,
+    '7/12': 7 / 12,
+    '8/12': 8 / 12,
+    '9/12': 9 / 12,
+    '10/12': 10 / 12,
+    '11/12': 11 / 12,
+    full: 1,
+  },
+};
+
+const createStyle = (...kvs) => {
+  const style = {};
+  for (let i = 0; i < kvs.length; i += 2) {
+    style[hyphenate(kvs[i])] = kvs[i + 1];
+  }
+  return style;
+};
+
+const mapApply = (obj) =>
+  Object.keys(obj.keys).reduce((acc, key) => {
+    Object.keys(obj.values).map((vkey) => {
+      const suffix = vkey ? '-' + vkey : '';
+      if (Array.isArray(obj.keys[key])) {
+        const args = [];
+        obj.keys[key].forEach((kk) => {
+          args.push(kk, obj.values[vkey]);
+        });
+        acc[key + suffix] = createStyle(...args);
+      } else {
+        acc[key + suffix] = createStyle(obj.keys[key], obj.values[vkey]);
+      }
+    });
+    return acc;
+  }, {});
+
+const classLookup = {
+  flex: createStyle('display', 'flex'),
+  block: createStyle('display', 'block'),
+  hidden: createStyle('display', 'none'),
+  'flex-1': createStyle('flex', '1'),
+  'flex-row': createStyle('flexDirection', 'row'),
+  'flex-col': createStyle('flexDirection', 'column'),
+  'flex-wrap': createStyle('flexWrap', 'wrap'),
+  'flex-nowrap': createStyle('flexWrap', 'nowrap'),
+  'flex-wrap-reverse': createStyle('flexWrap', 'wrap-reverse'),
+  'items-baseline': createStyle('alignItems', 'baseline'),
+  'items-start': createStyle('alignItems', 'flex-start'),
+  'items-center': createStyle('alignItems', 'center'),
+  'items-end': createStyle('alignItems', 'flex-end'),
+  'items-stretch': createStyle('alignItems', 'stretch'),
+  'justify-start': createStyle('justifyContent', 'flex-start'),
+  'justify-end': createStyle('justifyContent', 'flex-end'),
+  'justify-center': createStyle('justifyContent', 'center'),
+  'justify-between': createStyle('justifyContent', 'space-between'),
+  'justify-around': createStyle('justifyContent', 'space-around'),
+  'justify-evenly': createStyle('justifyContent', 'space-evenly'),
+  'text-left': createStyle('textAlign', 'left'),
+  'text-center': createStyle('textAlign', 'center'),
+  'text-right': createStyle('textAlign', 'right'),
+  'text-justify': createStyle('textAlign', 'justify'),
+  underline: createStyle('textDecoration', 'underline'),
+  'line-through': createStyle('textDecoration', 'line-through'),
+  'no-underline': createStyle('textDecoration', 'none'),
+  'whitespace-normal': createStyle('whiteSpace', 'normal'),
+  'whitespace-nowrap': createStyle('whiteSpace', 'nowrap'),
+  'whitespace-pre': createStyle('whiteSpace', 'pre'),
+  'whitespace-pre-line': createStyle('whiteSpace', 'pre-line'),
+  'whitespace-pre-wrap': createStyle('whiteSpace', 'pre-wrap'),
+  'break-normal': createStyle('wordBreak', 'normal', 'overflowWrap', 'normal'),
+  'break-words': createStyle('wordBreak', 'break-word'),
+  'break-all': createStyle('wordBreak', 'break-all'),
+  'font-sans': createStyle(
+    'font-family',
+    `ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"`,
+  ),
+  'font-serif': createStyle('font-family', `ui-serif, Georgia, Cambria, "Times New Roman", Times, serif`),
+  'font-mono': createStyle('font-family', `ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace`),
+  'font-thin': createStyle('fontWeight', '100'),
+  'font-extralight': createStyle('fontWeight', '200'),
+  'font-light': createStyle('fontWeight', '300'),
+  'font-normal': createStyle('fontWeight', '400'),
+  'font-medium': createStyle('fontWeight', '500'),
+  'font-semibold': createStyle('fontWeight', '600'),
+  'font-bold': createStyle('fontWeight', '700'),
+  'font-extrabold': createStyle('fontWeight', '800'),
+  'font-black': createStyle('fontWeight', '900'),
+  'text-xs': createStyle('fontSize', '0.75rem', 'lineHeight', '1rem'),
+  'text-sm': createStyle('fontSize', '0.875rem', 'lineHeight', '1.25rem'),
+  'text-base': createStyle('fontSize', '1rem', 'lineHeight', '1.5rem'),
+  'text-lg': createStyle('fontSize', '1.125rem', 'lineHeight', '1.75rem'),
+  'text-xl': createStyle('fontSize', '1.25rem', 'lineHeight', '1.75rem'),
+  'text-2xl': createStyle('fontSize', '1.5rem', 'lineHeight', '2rem'),
+  'text-3xl': createStyle('fontSize', '1.875rem', 'lineHeight', '2.25rem'),
+  'text-4xl': createStyle('fontSize', '2.25rem', 'lineHeight', '2.5rem'),
+  'text-5xl': createStyle('fontSize', '3rem', 'lineHeight', '1'),
+  'text-6xl': createStyle('fontSize', '3.75rem;', 'lineHeight', '1'),
+  'text-7xl': createStyle('fontSize', '4.5rem', 'lineHeight', '1'),
+  'text-8xl': createStyle('fontSize', '6rem', 'lineHeight', '1'),
+  'text-9xl': createStyle('fontSize', '8rem', 'lineHeight', '1'),
+  'cursor-auto': createStyle('cursor', 'auto'),
+  'cursor-default': createStyle('cursor', 'default'),
+  'cursor-pointer': createStyle('cursor', 'pointer'),
+  'cursor-wait': createStyle('cursor', 'wait'),
+  'cursor-text': createStyle('cursor', 'text'),
+  'cursor-move': createStyle('cursor', 'move'),
+  'cursor-help': createStyle('cursor', 'help'),
+  'cursor-not-allowed': createStyle('cursor', 'not-allowed'),
+  'pointer-events-none': createStyle('pointer-events', 'none'),
+  'pointer-events-auto': createStyle('pointer-events', 'auto'),
+  'select-none': createStyle('user-select', 'none'),
+  'select-text': createStyle('user-select', 'text'),
+  'select-all': createStyle('user-select', 'all'),
+  'select-auto': createStyle('user-select', 'auto'),
+  ...mapApply(sizes),
+  ...mapApply(spacing),
+  ...mapApply(colors),
+  ...mapApply(borders),
+};
+// console.log('classLookup', classLookup);
+
+export const getTWStyleSheet = (template) => {
+  const classList = template.strings
+    .reduce((acc, item) => {
+      const matches = item.match(/(?:class|className)=(?:["']\W+\s*(?:\w+)\()?["']([^'"]+)['"]/gim);
+      if (matches) {
+        matches.forEach((matched) => {
+          acc += matched.replace('class="', '').replace('"', '') + ' ';
+        });
+      }
+      return acc;
+    }, '')
+    .split(' ')
+    .filter((it) => it !== '');
+  let style = ``;
+  classList.forEach((k) => {
+    const item = classLookup[k];
+    if (item) {
+      style += `
+        .${k} {
+          ${Object.keys(item)
+            .map((key) => `${key}: ${item[key]};`)
+            .join('\n')}
+        }
+      `;
     }
   });
-  obj.render = () => {
-    return Object.keys(obj).reduce((acc, key) => {
-      acc += key.includes('-') || key === '__global__' ? obj[key] + '\n\n' : '';
-      return acc;
-    }, '');
-  };
-  return obj;
+  return style;
 };
 
 const lastAttributeNameRegex =
@@ -417,28 +748,26 @@ export class AtomsElement extends BaseElement {
     const template = this.render();
     const result = render(template, this);
     if (isBrowser) {
-      if (!this.stylesMounted && this.constructor.styles) {
-        this.appendChild(document.createElement('style')).textContent = this.constructor.styles.render();
+      if (!this.stylesMounted) {
+        const twStyles = getTWStyleSheet(template);
+        this.appendChild(document.createElement('style')).textContent = twStyles;
         this.stylesMounted = true;
       }
     } else {
-      if (this.constructor.styles) {
-        return `
-          ${result}
-          <style>
-          ${this.constructor.styles.render()}
-          </style>
-        `;
-      } else {
-        return result;
-      }
+      const twStyles = getTWStyleSheet(template);
+      return `
+        ${result}
+        <style>
+        ${twStyles}
+        </style>
+      `;
     }
   }
 }
 export const getConfig = () => (isBrowser ? window.config : global.config);
 export const getLocation = () => (isBrowser ? window.location : global.location);
 
-export const createElement = ({ name, attrTypes, stateTypes, computedTypes, styles, render }) => {
+export const createElement = ({ name, attrTypes, stateTypes, computedTypes, render }) => {
   const Element = class extends AtomsElement {
     static name = name();
 
@@ -447,8 +776,6 @@ export const createElement = ({ name, attrTypes, stateTypes, computedTypes, styl
     static stateTypes = stateTypes ? stateTypes() : {};
 
     static computedTypes = computedTypes ? computedTypes() : {};
-
-    static styles = styles;
 
     constructor(ssrAttributes) {
       super(ssrAttributes);
@@ -462,5 +789,5 @@ export const createElement = ({ name, attrTypes, stateTypes, computedTypes, styl
     }
   };
   Element.register();
-  return { name, attrTypes, stateTypes, computedTypes, styles, render };
+  return { name, attrTypes, stateTypes, computedTypes, render };
 };

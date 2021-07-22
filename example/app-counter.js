@@ -1,4 +1,4 @@
-import { createElement, html, css, object, number, string } from '../element.js';
+import { createElement, html, object, number, string, unsafeHTML } from '../element.js';
 
 const name = () => 'app-counter';
 
@@ -23,39 +23,6 @@ const computedTypes = () => ({
     }),
 });
 
-const styles = css({
-  title: {
-    fontSize: '20px',
-    marginBottom: '0.5rem',
-    textAlign: 'center',
-  },
-  span: {
-    fontSize: '16px',
-  },
-  container: {
-    display: 'flex',
-    flex: 1,
-    flexDirection: 'row',
-    fontSize: '32px',
-    color: 'rgba(55, 65, 81, 1)',
-  },
-  mx: {
-    marginLeft: '5rem',
-    marginRight: '5rem',
-    fontSize: '30px',
-    fontFamily: `ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace`,
-  },
-  button: {
-    paddingTop: '0.5rem',
-    paddingBottom: '0.5rem',
-    paddingLeft: '1rem',
-    paddingRight: '1rem',
-    color: 'rgba(55, 65, 81, 1)',
-    borderRadius: '0.25rem',
-    backgroundColor: 'rgba(209, 213, 219, 1)',
-  },
-});
-
 const render = ({ attrs, state, computed }) => {
   const { name, meta } = attrs;
   const { count, setCount } = state;
@@ -63,19 +30,23 @@ const render = ({ attrs, state, computed }) => {
 
   return html`
     <div>
-      <div class=${styles.title}>
+      <div class="mb-2">
         Counter: ${name}
-        <span class=${styles.span}>starts at ${meta?.start}</span>
+        <span>starts at ${meta?.start}</span>
       </div>
-      <div class=${styles.container}>
-        <button class=${styles.button} @click=${() => setCount((v) => v - 1)}>-</button>
-        <div class=${styles.mx}>
-          <h1>${count}</h1>
+      <div class="flex flex-1 flex-row items-center text-gray-700">
+        <button class="bg-gray-300 text-gray-700 rounded hover:bg-gray-200 px-4 py-2 text-3xl focus:outline-none" @click=${() => setCount((v) => v - 1)}>
+          -
+        </button>
+        <div class="mx-20">
+          <h1 class="text-2xl font-mono">${count < 10 ? unsafeHTML('&nbsp;') : ''}${count}</h1>
         </div>
-        <button class=${styles.button} @click=${() => setCount((v) => v + 1)}>+</button>
+        <button class="bg-gray-300 text-gray-700 rounded hover:bg-gray-200 px-4 py-2 text-3xl focus:outline-none" @click=${() => setCount((v) => v + 1)}>
+          +
+        </button>
       </div>
-      <div class=${styles.mx}>
-        <h1>Sum: ${sum}</h1>
+      <div class="mx-20">
+        <h1 class="text-xl font-mono">Sum: ${sum}</h1>
       </div>
     </div>
   `;
@@ -86,6 +57,5 @@ export default createElement({
   attrTypes,
   stateTypes,
   computedTypes,
-  styles,
   render,
 });

@@ -33,9 +33,11 @@ http
       return;
     }
     const filename = srcMap[req.url];
-    const data = fs.readFileSync(filename);
-    res.setHeader('Content-type', 'application/javascript');
-    res.end(data);
+    if (filename) {
+      const data = fs.readFileSync(filename);
+      res.setHeader('Content-type', 'application/javascript');
+      res.end(data);
+    }
   })
   .listen(parseInt(port));
 
