@@ -81,20 +81,20 @@ exports[`createElement  1`] = `
 exports[`css 1`] = `
 "button {
 
-      color: magenta;
+    color: magenta;
     font-size: 10px;
 
-          font-size: 64px;
+      font-size: 64px;
 
-          color: black;
+      color: black;
 
-    
-              color: navy;
+
+        color: navy;
 
 }
 container {
 
-      flex: 1;
+    flex: 1;
     align-items: center;
     justify-content: center;
 
