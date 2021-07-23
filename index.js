@@ -10,7 +10,7 @@ export const css = (obj, isChild = false, indent = '') => {
     const value = obj[key];
     acc += !isChild ? `${key} {\n` : '';
     if (typeof value === 'object') {
-      acc += '\n  ' + indent + css(value, true, indent + '  ');
+      acc += '\n' + css(value, true, indent + '  ');
     } else {
       acc += '  ' + indent + hyphenate(key) + ': ' + value + ';\n';
     }

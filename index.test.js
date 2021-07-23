@@ -278,7 +278,6 @@ test('AtomsElement', async () => {
   });
   instance.renderItem = () => html`<div><p>render item 1</p></div>`;
   expect(AppItem.observedAttributes).toEqual(['perpage', 'address']);
-  console.log('instance', instance.attrs);
   const res = instance.renderTemplate();
   expect(res).toMatchSnapshot();
 });
