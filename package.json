@@ -1,6 +1,6 @@
 {
   "name": "atoms-element",
-  "version": "2.3.0",
+  "version": "2.5.0",
   "description": "A simple web component library for defining your custom elements. It works on both client and server. It supports hooks and follows the same principles of react.",
   "keywords": [
     "pyros.sh",
@@ -15,10 +15,8 @@
   ],
   "files": [
     "lit-html.js",
-    "element.js",
-    "element.d.ts",
-    "page.js",
-    "page.d.ts"
+    "index.js",
+    "index.d.ts"
   ],
   "license": "MIT",
   "author": "pyros.sh",
