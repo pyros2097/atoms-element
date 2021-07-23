@@ -54,26 +54,11 @@ export type CreateElementProps = {
 
 export const createElement = (props: CreateElementProps) => CreateElementProps;
 
-export type HandlerProps = {
-  config: Config;
-  data: Data;
-  item: Item;
-}
-export type Handler = (props: HandlerProps) => string;
-
-export type CreatePageProps = {
-  route: Handler;
-  datapaths: Handler;
-  head: Handler;
-  body: Handler;
-}
-
 export type PageRenderProps = {
-  config: Config;
-  data: Data;
-  item: Item; 
+  props: any;
   headScript: string; 
   bodyScript: string;
 }
+export type Handler = (props: any) => string;
 
-export const createPage = (props: CreatePageProps) => (props: PageRenderProps) => string;
+export const createPage = (props: { head: Handler, body: Handler}) => (props: PageRenderProps) => string;

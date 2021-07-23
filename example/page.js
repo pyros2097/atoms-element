@@ -2,10 +2,6 @@ import { createPage, html, css } from '../index.js';
 import { pageStyles } from './styles.js';
 import './app-counter.js';
 
-const route = () => {
-  return '/counter';
-};
-
 const head = ({ config }) => {
   return html`
     <title>${config.title}</title>
@@ -24,7 +20,6 @@ const body = () => {
 };
 
 export default createPage({
-  route,
   head,
   body,
 });
