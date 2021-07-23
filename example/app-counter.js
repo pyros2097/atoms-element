@@ -12,7 +12,9 @@ const attrTypes = () => ({
 const stateTypes = () => ({
   count: number()
     .required()
-    .default((attrs) => attrs.meta?.start || 0),
+    .default((attrs) => attrs.meta?.start || 0)
+    .action('increment', ({ state }) => state.setCount(state.count + 1))
+    .action('decrement', ({ state }) => state.setCount(state.count - 1)),
 });
 
 const computedTypes = () => ({
@@ -21,12 +23,17 @@ const computedTypes = () => ({
     .compute('count', (count) => {
       return count + 10;
     }),
+  warningClass: string()
+    .required()
+    .compute('count', (count) => {
+      return count > 10 ? 'text-red-500' : '';
+    }),
 });
 
 const render = ({ attrs, state, computed }) => {
   const { name, meta } = attrs;
-  const { count, setCount } = state;
-  const { sum } = computed;
+  const { count, increment, decrement } = state;
+  const { sum, warningClass } = computed;
 
   return html`
     <div>
@@ -35,15 +42,11 @@ const render = ({ attrs, state, computed }) => {
         <span>starts at ${meta?.start}</span>
       </div>
       <div class="flex flex-1 flex-row items-center text-gray-700">
-        <button class="bg-gray-300 text-gray-700 rounded hover:bg-gray-200 px-4 py-2 text-3xl focus:outline-none" @click=${() => setCount((v) => v - 1)}>
-          -
-        </button>
+        <button class="bg-gray-300 text-gray-700 rounded hover:bg-gray-200 px-4 py-2 text-3xl focus:outline-none" @click=${decrement}>-</button>
         <div class="mx-20">
-          <h1 class="text-2xl font-mono">${count < 10 ? unsafeHTML('&nbsp;') : ''}${count}</h1>
+          <h1 class="text-3xl font-mono ${warningClass}">${count}</h1>
         </div>
-        <button class="bg-gray-300 text-gray-700 rounded hover:bg-gray-200 px-4 py-2 text-3xl focus:outline-none" @click=${() => setCount((v) => v + 1)}>
-          +
-        </button>
+        <button class="bg-gray-300 text-gray-700 rounded hover:bg-gray-200 px-4 py-2 text-3xl focus:outline-none" @click=${increment}>+</button>
       </div>
       <div class="mx-20">
         <h1 class="text-xl font-mono">Sum: ${sum}</h1>

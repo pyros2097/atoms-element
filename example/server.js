@@ -2,7 +2,7 @@ import http from 'http';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
-import renderIndex from './index.js';
+import renderPage from './page.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -20,8 +20,11 @@ http
     if (req.url === '/') {
       res.statusCode = 200;
       res.setHeader('Content-type', 'text/html');
-      const html = renderIndex({
-        config: { lang: 'en', title: 'Counter App' },
+      const html = renderPage({
+        lang: 'en',
+        props: {
+          config: { lang: 'en', title: 'Counter App' },
+        },
         headScript: '',
         bodyScript: `
           <script type="module">
