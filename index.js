@@ -1,4 +1,4 @@
-import { html, render as litRender, directive, NodePart, AttributePart, PropertyPart, isPrimitive } from './lit-html.js';
+import { html, render as litRender, directive, NodePart, isPrimitive } from './lit-html.js';
 
 const isBrowser = typeof window !== 'undefined';
 export { html, isBrowser };
@@ -19,20 +19,6 @@ export const css = (obj, isChild = false, indent = '') => {
   }, '');
   return cssText;
 };
-
-// const width = Dimensions.get('screen').width;
-// let bp = '';
-// if (width >= 640 && width <= 768) {
-//   bp = 'sm';
-// } else if (width >= 768 && width < 1024) {
-//   bp = 'md';
-// } else if (width >= 1024 && width < 1280) {
-//   bp = 'lg';
-// } else if (width >= 1280 && width < 1536) {
-//   bp = 'xl';
-// } else if (width >= 1536) {
-//   bp = '2xl';
-// }
 
 const colors = {
   keys: {
@@ -189,23 +175,30 @@ const spacing = {
   },
 };
 
-// rounded-none	border-radius: 0px;
-// rounded-sm	border-radius: 0.125rem;
-// rounded	border-radius: 0.25rem;
-// rounded-md	border-radius: 0.375rem;
-// rounded-lg	border-radius: 0.5rem;
-// rounded-xl	border-radius: 0.75rem;
-// rounded-2xl	border-radius: 1rem;
-// rounded-3xl	border-radius: 1.5rem;
-// rounded-full	border-radius: 9999px;
-// rounded-t-
-// rounded-r
-// rounded-b
-// rounded-l
-// rounded-tl
-// rounded-tr
-// rounded-br
-// rounded-bl
+const radius = {
+  keys: {
+    rounded: 'borderRadius',
+    'rounded-t': 'borderTopRadius',
+    'rounded-r': 'borderRightRadius',
+    'rounded-l': 'borderLeftRadius',
+    'rounded-b': 'borderBottomRadius',
+    'rounded-tl': ['borderTopRadius', 'borderLeftRadius'],
+    'rounded-tr': ['borderTopRadius', 'borderRightRadius'],
+    'rounded-bl': ['borderBottomRadius', 'borderLeftRadius'],
+    'rounded-br': ['borderBottomRadius', 'borderRightRadius'],
+  },
+  values: {
+    none: '0px',
+    sm: '0.125rem',
+    '': '0.25rem',
+    md: '0.375rem',
+    lg: '0.5rem',
+    xl: '0.75rem',
+    '2xl': '1rem',
+    '3xl': '1.5rem',
+    full: '9999px',
+  },
+};
 
 const borders = {
   keys: {
@@ -369,11 +362,11 @@ const classLookup = {
   ...mapApply(spacing),
   ...mapApply(colors),
   ...mapApply(borders),
+  ...mapApply(radius),
 };
-// console.log('classLookup', classLookup);
 
-export const getTWStyleSheet = (template) => {
-  const classList = template.strings
+export const getClassList = (template) => {
+  return template.strings
     .reduce((acc, item) => {
       const matches = item.match(/class=(?:["']\W+\s*(?:\w+)\()?["']([^'"]+)['"]/gim);
       if (matches) {
@@ -385,11 +378,14 @@ export const getTWStyleSheet = (template) => {
     }, '')
     .split(' ')
     .filter((it) => it !== '');
-  let style = ``;
+};
+
+export const getStyleSheet = (classList) => {
+  let styleSheet = ``;
   classList.forEach((k) => {
     const item = classLookup[k];
     if (item) {
-      style += `
+      styleSheet += `
         .${k} {
           ${Object.keys(item)
             .map((key) => `${key}: ${item[key]};`)
@@ -398,45 +394,15 @@ export const getTWStyleSheet = (template) => {
       `;
     }
   });
-  return style;
+  return styleSheet;
 };
 
 const lastAttributeNameRegex =
   /([ \x09\x0a\x0c\x0d])([^\0-\x1F\x7F-\x9F "'>=/]+)([ \x09\x0a\x0c\x0d]*=[ \x09\x0a\x0c\x0d]*(?:[^ \x09\x0a\x0c\x0d"'`<>=]*|"[^"]*|'[^']*))$/;
-
-const wrapAttribute = (attrName, suffix, text, v) => {
-  let buffer = text;
-  const hasQuote = suffix && suffix.includes(`="`);
-  if (attrName && !hasQuote) {
-    buffer += `"`;
-  }
-  buffer += v;
-  if (attrName && !hasQuote) {
-    buffer += `"`;
-  }
-  return buffer;
-};
-
 const tagRE = /<[a-zA-Z0-9\-\!\/](?:"[^"]*"|'[^']*'|[^'">])*>/g;
 const whitespaceRE = /^\s*$/;
 const attrRE = /\s([^'"/\s><]+?)[\s/>]|([^\s=]+)=\s?(".*?"|'.*?')/g;
-const voidElements = {
-  area: true,
-  base: true,
-  br: true,
-  col: true,
-  embed: true,
-  hr: true,
-  img: true,
-  input: true,
-  link: true,
-  meta: true,
-  param: true,
-  source: true,
-  track: true,
-  wbr: true,
-};
-const empty = Object.create(null);
+const voidElements = ['area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta', 'param', 'source', 'track', 'wbr'];
 
 const parseTag = (tag) => {
   const res = {
@@ -450,7 +416,7 @@ const parseTag = (tag) => {
   const tagMatch = tag.match(/<\/?([^\s]+?)[/\s>]/);
   if (tagMatch) {
     res.name = tagMatch[1];
-    if (voidElements[tagMatch[1]] || tag.charAt(tag.length - 2) === '/') {
+    if (voidElements.includes(tagMatch[1]) || tag.charAt(tag.length - 2) === '/') {
       res.voidElement = true;
     }
 
@@ -494,14 +460,11 @@ const parseTag = (tag) => {
 
   return res;
 };
-const parseHtml = (html, options) => {
-  options || (options = {});
-  options.components || (options.components = empty);
+const parseHtml = (html) => {
   const result = [];
   const arr = [];
   let current;
   let level = -1;
-  let inComponent = false;
 
   // handle text at top level
   if (html.indexOf('<') !== 0) {
@@ -513,13 +476,6 @@ const parseHtml = (html, options) => {
   }
 
   html.replace(tagRE, function (tag, index) {
-    if (inComponent) {
-      if (tag !== '</' + current.name + '>') {
-        return;
-      } else {
-        inComponent = false;
-      }
-    }
     const isOpen = tag.charAt(1) !== '/';
     const isComment = tag.startsWith('<!--');
     const start = index + tag.length;
@@ -543,12 +499,8 @@ const parseHtml = (html, options) => {
       level++;
 
       current = parseTag(tag);
-      if (current.type === 'tag' && options.components[current.name]) {
-        current.type = 'component';
-        inComponent = true;
-      }
 
-      if (!current.voidElement && !inComponent && nextChar && nextChar !== '<') {
+      if (!current.voidElement && nextChar && nextChar !== '<') {
         current.children.push({
           type: 'text',
           content: html.slice(start, html.indexOf('<', start)),
@@ -575,7 +527,7 @@ const parseHtml = (html, options) => {
         // move current up a level to match the end tag
         current = level === -1 ? result : arr[level];
       }
-      if (!inComponent && nextChar !== '<' && nextChar) {
+      if (nextChar !== '<' && nextChar) {
         // trailing text node
         // if we're at the root, push a base text node. otherwise add as
         // a child to the current node.
@@ -650,6 +602,19 @@ const hydrate = (node) => {
   }
 };
 
+const wrapAttribute = (attrName, suffix, text, v) => {
+  let buffer = text;
+  const hasQuote = suffix && suffix.includes(`="`);
+  if (attrName && !hasQuote) {
+    buffer += `"`;
+  }
+  buffer += v;
+  if (attrName && !hasQuote) {
+    buffer += `"`;
+  }
+  return buffer;
+};
+
 export const render = isBrowser
   ? litRender
   : (template) => {
@@ -721,60 +686,6 @@ export const unsafeHTML = isBrowser
     })
   : (value) => value;
 
-const previousClassesCache = new WeakMap();
-export const classMap = isBrowser
-  ? directive((classInfo) => (part) => {
-      if (!(part instanceof AttributePart) || part instanceof PropertyPart || part.committer.name !== 'class' || part.committer.parts.length > 1) {
-        throw new Error('The `classMap` directive must be used in the `class` attribute ' + 'and must be the only part in the attribute.');
-      }
-      const { committer } = part;
-      const { element } = committer;
-      let previousClasses = previousClassesCache.get(part);
-      if (previousClasses === undefined) {
-        // Write static classes once
-        // Use setAttribute() because className isn't a string on SVG elements
-        element.setAttribute('class', committer.strings.join(' '));
-        previousClassesCache.set(part, (previousClasses = new Set()));
-      }
-      const classList = element.classList;
-      // Remove old classes that no longer apply
-      // We use forEach() instead of for-of so that re don't require down-level
-      // iteration.
-      previousClasses.forEach((name) => {
-        if (!(name in classInfo)) {
-          classList.remove(name);
-          previousClasses.delete(name);
-        }
-      });
-      // Add or remove classes based on their classMap value
-      for (const name in classInfo) {
-        const value = classInfo[name];
-        if (value != previousClasses.has(name)) {
-          // We explicitly want a loose truthy check of `value` because it seems
-          // more convenient that '' and 0 are skipped.
-          if (value) {
-            classList.add(name);
-            previousClasses.add(name);
-          } else {
-            classList.remove(name);
-            previousClasses.delete(name);
-          }
-        }
-      }
-      if (typeof classList.commit === 'function') {
-        classList.commit();
-      }
-    })
-  : (classes) => {
-      let value = '';
-      for (const key in classes) {
-        if (classes[key]) {
-          value += `${value.length ? ' ' : ''}${key}`;
-        }
-      }
-      return value;
-    };
-
 const logError = (msg) => {
   if (isBrowser ? window.__DEV__ : global.__DEV) {
     console.warn(msg);
@@ -820,6 +731,13 @@ const validator = (type, validate) => (innerType) => {
     };
     return common;
   };
+  common.action = (name, fn) => {
+    if (!common.__handlers) {
+      common.__handlers = {};
+    }
+    common.__handlers[name] = fn;
+    return common;
+  };
   return common;
 };
 
@@ -847,17 +765,7 @@ export const array = validator('array', (innerType, context, data) => {
 });
 
 const fifo = (q) => q.shift();
-const filo = (q) => q.pop();
 const microtask = (flush) => () => queueMicrotask(flush);
-const task = (flush) => {
-  if (isBrowser) {
-    const ch = new window.MessageChannel();
-    ch.port1.onmessage = flush;
-    return () => ch.port2.postMessage(null);
-  } else {
-    return () => setImmediate(flush);
-  }
-};
 
 const registry = {};
 const BaseElement = isBrowser ? window.HTMLElement : class {};
@@ -887,13 +795,46 @@ export class AtomsElement extends BaseElement {
 
   constructor(ssrAttributes) {
     super();
+    this.ssrAttributes = ssrAttributes;
     this._dirty = false;
     this._connected = false;
-    this._state = {};
-    this.ssrAttributes = ssrAttributes;
+    this.attrs = {};
+    this.state = {};
     this.config = isBrowser ? window.config : global.config;
     this.location = isBrowser ? window.location : global.location;
-    this.stylesMounted = false;
+    this.prevClassList = [];
+    this.initState();
+    this.initAttrs();
+  }
+
+  initAttrs() {
+    Object.keys(this.constructor.attrTypes).forEach((key) => {
+      const attrType = this.constructor.attrTypes[key];
+      const newValue = isBrowser ? this.getAttribute(key.toLowerCase()) : this.ssrAttributes[key.toLowerCase()];
+      const data = attrType.parse(newValue);
+      attrType.validate(`<${this.constructor.name}> ${key}`, data);
+      this.attrs[key] = data;
+    });
+  }
+
+  initState() {
+    Object.keys(this.constructor.stateTypes).forEach((key) => {
+      const stateType = this.constructor.stateTypes[key];
+      if (!this.state[key] && typeof stateType.__default !== 'undefined') {
+        this.state[key] = typeof stateType.__default === 'function' ? stateType.__default(this.attrs, this.state) : stateType.__default;
+      }
+      const setKey = `set${key[0].toUpperCase()}${key.slice(1)}`;
+      this.state[setKey] = (v) => {
+        // TODO: check type on set
+        this.state[key] = typeof v === 'function' ? v(this.state[key]) : v;
+        this.update();
+      };
+      if (stateType.__handlers) {
+        Object.keys(stateType.__handlers).map((hkey) => {
+          this.state[hkey] = () => stateType.__handlers[hkey]({ attrs: this.attrs, state: this.state });
+        });
+      }
+    });
   }
 
   connectedCallback() {
@@ -908,6 +849,7 @@ export class AtomsElement extends BaseElement {
 
   attributeChangedCallback(key, oldValue, newValue) {
     if (this._connected) {
+      this.initAttrs();
       this.update();
     }
   }
@@ -942,42 +884,15 @@ export class AtomsElement extends BaseElement {
     this.batch(microtask, fifo, () => this._performUpdate());
   }
 
-  get attrs() {
-    return Object.keys(this.constructor.attrTypes).reduceRight((acc, key) => {
-      const attrType = this.constructor.attrTypes[key];
-      const newValue = isBrowser ? this.getAttribute(key.toLowerCase()) : this.ssrAttributes[key.toLowerCase()];
-      const data = attrType.parse(newValue);
-      attrType.validate(`<${this.constructor.name}> ${key}`, data);
-      acc[key] = data;
-      return acc;
-    }, {});
-  }
-
-  get state() {
-    return Object.keys(this.constructor.stateTypes).reduceRight((acc, key) => {
-      const stateType = this.constructor.stateTypes[key];
-      if (!this._state[key] && typeof stateType.__default !== 'undefined') {
-        this._state[key] = typeof stateType.__default === 'function' ? stateType.__default(this.attrs, this._state) : stateType.__default;
-      }
-      acc[key] = this._state[key];
-      acc[`set${key[0].toUpperCase()}${key.slice(1)}`] = (v) => {
-        // TODO: check type on set
-        this._state[key] = typeof v === 'function' ? v(this._state[key]) : v;
-        this.update();
-      };
-      return acc;
-    }, {});
-  }
-
   get computed() {
     return Object.keys(this.constructor.computedTypes).reduceRight((acc, key) => {
       const type = this.constructor.computedTypes[key];
       const state = this.state;
-      const values = type.__compute.deps.reduce((acc, key) => {
+      const values = type.__compute.deps.reduce((dacc, key) => {
         if (typeof state[key] !== undefined) {
-          acc.push(state[key]);
+          dacc.push(state[key]);
         }
-        return acc;
+        return dacc;
       }, []);
       acc[key] = type.__compute.fn(...values);
       return acc;
@@ -986,25 +901,45 @@ export class AtomsElement extends BaseElement {
 
   renderTemplate() {
     const template = this.render();
-    const result = render(template, this);
     if (isBrowser) {
-      if (!this.stylesMounted) {
-        const twStyles = getTWStyleSheet(template);
-        this.appendChild(document.createElement('style')).textContent = twStyles;
-        this.stylesMounted = true;
+      if (!this.styleElement) {
+        render(template, this);
+        const classList = getClassList(template);
+        const styleSheet = getStyleSheet(classList);
+        this.prevClassList = classList;
+        this.styleElement = document.createElement('style');
+        this.appendChild(this.styleElement).textContent = styleSheet;
+      } else {
+        const missingClassList = template.values
+          .filter((item) => {
+            if (typeof item === 'string') {
+              const list = item.split(' ');
+              return list.filter((cls) => classLookup[cls] && !this.prevClassList.includes(cls)).length > 0;
+            }
+            return false;
+          })
+          .reduce((acc, str) => acc.concat(str.split(' ')), []);
+        if (missingClassList.length > 0) {
+          const styleSheet = getStyleSheet(missingClassList);
+          this.styleElement.textContent += '\n' + styleSheet;
+          this.prevClassList.push(...missingClassList);
+        }
+        render(template, this);
       }
     } else {
-      const twStyles = getTWStyleSheet(template);
+      const result = render(template, this);
+      const classList = getClassList(template);
+      const styleSheet = getStyleSheet(classList);
       return `
         ${result}
         <style>
-        ${twStyles}
+        ${styleSheet}
         </style>
       `;
     }
   }
 }
-export const getConfig = () => (isBrowser ? window.config : global.config);
+export const getConfig = () => (isBrowser ? window.props.config : global.config);
 export const getLocation = () => (isBrowser ? window.location : global.location);
 
 export const createElement = ({ name, attrTypes, stateTypes, computedTypes, render }) => {
@@ -1033,15 +968,14 @@ export const createElement = ({ name, attrTypes, stateTypes, computedTypes, rend
 };
 
 export const createPage = ({ route, datapaths, head, body }) => {
-  return ({ config, data, item, headScript, bodyScript }) => {
+  return ({ headScript, bodyScript, lang, props }) => {
     const isProd = process.env.NODE_ENV === 'production';
-    const props = { config, data, item };
     const headHtml = render(head(props));
     const bodyTemplate = body(props);
     const bodyHtml = render(bodyTemplate);
     return `
       <!DOCTYPE html>
-      <html lang="${config.lang}">
+      <html lang="${lang}">
         <head>
           <meta charset="utf-8" />
           <meta http-equiv="x-ua-compatible" content="ie=edge" />
@@ -1051,7 +985,7 @@ export const createPage = ({ route, datapaths, head, body }) => {
           <link rel="icon" type="image/png" href="/assets/icon.png" />
           ${headHtml}
           <style>
-            ${getTWStyleSheet(bodyTemplate)}
+            ${getStyleSheet(getClassList(bodyTemplate))}
           </style>
           ${headScript}
         </head>
@@ -1059,9 +993,7 @@ export const createPage = ({ route, datapaths, head, body }) => {
           ${bodyHtml}
           <script>
             window.__DEV__ = ${!isProd};
-            window.config = ${JSON.stringify(config)};
-            window.data = ${JSON.stringify(data)};
-            window.item = ${JSON.stringify(item)};
+            window.props = ${JSON.stringify(props)};
           </script>
           ${bodyScript}
         </body>

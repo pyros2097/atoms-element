@@ -1,0 +1,134 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`AtomsElement 1`] = `
+"
+        
+        <div perPage=\\"1\\">
+          <p>street: 123</p> <p>count: 0</p> <p>sum: 10</p> <div><p>render item 1</p></div> </div>
+        <style>
+        
+        </style>
+      "
+`;
+
+exports[`Page 1`] = `
+"
+      <!DOCTYPE html>
+      <html lang=\\"en\\">
+        <head>
+          <meta charset=\\"utf-8\\" />
+          <meta http-equiv=\\"x-ua-compatible\\" content=\\"ie=edge\\" />
+          <meta http-equiv=\\"Content-Type\\" content=\\"text/html; charset=utf-8\\">
+          <meta name=\\"viewport\\" content=\\"width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=5.0, shrink-to-fit=no\\">
+          <link rel=\\"sitemap\\" type=\\"application/xml\\" href=\\"/sitemap.xml\\" />
+          <link rel=\\"icon\\" type=\\"image/png\\" href=\\"/assets/icon.png\\" />
+          
+      <title>123</title> <meta name=\\"title\\" content=\\"123\\"/> <meta name=\\"description\\" content=\\"123\\"/>
+          <style>
+            
+        .flex {
+          display: flex;
+        }
+      
+        .flex-1 {
+          flex: 1;
+        }
+      
+        .flex-col {
+          flex-direction: column;
+        }
+      
+        .mt-20 {
+          margin-top: 5rem;
+        }
+      
+        .items-center {
+          align-items: center;
+        }
+      
+        .text-5xl {
+          font-size: 3rem;
+line-height: 1;
+        }
+      
+          </style>
+          <script type=\\"module\\"><script>
+        </head>
+        <body>
+          
+      <div>
+        <app-header></app-header> <main class=\\"flex flex-1 flex-col mt-20 items-center\\">
+          <h1 class=\\"text-5xl\\">123</h1> </main> </div>
+          <script>
+            window.__DEV__ = true;
+            window.props = {\\"config\\":{\\"title\\":\\"123\\"}};
+          </script>
+          <script type=\\"module\\"><script>
+        </body>
+      </html>
+  "
+`;
+
+exports[`createElement  1`] = `
+"
+         <div></div>
+        <style>
+        
+        </style>
+      "
+`;
+
+exports[`css 1`] = `
+"button {
+
+      color: magenta;
+    font-size: 10px;
+
+          font-size: 64px;
+
+          color: black;
+
+    
+              color: navy;
+
+}
+container {
+
+      flex: 1;
+    align-items: center;
+    justify-content: center;
+
+}
+"
+`;
+
+exports[`render 1`] = `
+"
+    <div>
+      <app-counter name=\\"123\\" class=\\"abc high\\" age=\\"1\\" details1=\\"{'name':'123','address':{'street':'1'}}\\" items=\\"[1,2,3]\\"></app-counter> </div>"
+`;
+
+exports[`render attribute keys 1`] = `
+"
+    <div>
+      <app-counter name=\\"123\\" perPage=\\"1\\"></app-counter> </div>"
+`;
+
+exports[`render attributes within quotes 1`] = `
+"
+    <div>
+      <app-counter name=\\"123\\" class=\\"high\\" age=\\"1\\" details1=\\"{'name':'123','address':{'street':'1'}}\\" items=\\"[1,2,3]\\"></app-counter> </div>"
+`;
+
+exports[`render multi template 1`] = `
+"
+    <div>
+      
+          <app-item meta=\\"{'index':1}\\">
+            <button>+</button> </app-item> <app-item meta=\\"{'index':2}\\">
+            <button>+</button> </app-item> </div>"
+`;
+
+exports[`render single template 1`] = `" <div>NoCountry false</div>"`;
+
+exports[`render unsafeHTML 1`] = `" <div><div><p class=\\"123\\">this is unsafe</p></div></div>"`;
