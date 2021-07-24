@@ -4,6 +4,32 @@ const isBrowser = typeof window !== 'undefined';
 export { html, isBrowser };
 
 const hyphenate = (s) => s.replace(/[A-Z]|^ms/g, '-$&').toLowerCase();
+const percent = (v) => (v * 100).toFixed(2) + '%';
+const createStyle = (...kvs) => {
+  const style = {};
+  for (let i = 0; i < kvs.length; i += 2) {
+    style[hyphenate(kvs[i])] = kvs[i + 1];
+  }
+  return style;
+};
+
+const mapApply = (obj) =>
+  Object.keys(obj.keys).reduce((acc, key) => {
+    Object.keys(obj.values).map((vkey) => {
+      const suffix = vkey ? '-' + vkey : '';
+      const className = `${key}${suffix}`;
+      if (Array.isArray(obj.keys[key])) {
+        const args = [];
+        obj.keys[key].forEach((kk) => {
+          args.push(kk, obj.values[vkey]);
+        });
+        acc[className] = createStyle(...args);
+      } else {
+        acc[className] = createStyle(obj.keys[key], obj.values[vkey]);
+      }
+    });
+    return acc;
+  }, {});
 
 export const css = (obj, isChild = false, indent = '') => {
   const cssText = Object.keys(obj).reduce((acc, key) => {
@@ -18,6 +44,47 @@ export const css = (obj, isChild = false, indent = '') => {
     return acc;
   }, '');
   return cssText;
+};
+
+export const getClassList = (template) => {
+  const classes = template.strings
+    .reduce((acc, item) => {
+      const matches = item.match(/class=(?:["']\W+\s*(?:\w+)\()?["']([^'"]+)['"]/gim);
+      if (matches) {
+        matches.forEach((matched) => {
+          acc += matched.replace('class="', '').replace('"', '') + ' ';
+        });
+      }
+      return acc;
+    }, '')
+    .split(' ')
+    .filter((it) => it !== '');
+  template.values.forEach((item) => {
+    if (typeof item === 'string') {
+      const list = item.split(' ');
+      return classes.push(...list.filter((cls) => classLookup[cls]));
+    }
+    return false;
+  });
+  return classes;
+};
+
+export const getStyleSheet = (classList) => {
+  let styleSheet = ``;
+  classList.forEach((cls) => {
+    const item = classLookup[cls];
+    if (item) {
+      const className = cls.replace(`/`, `\\/`);
+      styleSheet += `
+        .${className} {
+          ${Object.keys(item)
+            .map((key) => `${key}: ${item[key]};`)
+            .join('\n')}
+        }
+      `;
+    }
+  });
+  return styleSheet;
 };
 
 const colors = {
@@ -227,58 +294,71 @@ const sizes = {
     maxw: 'maxWidth',
   },
   values: {
-    '1/2': 1 / 1,
-    '1/4': 1 / 4,
-    '2/4': 2 / 4,
-    '3/4': 3 / 4,
-    '1/5': 1 / 5,
-    '2/5': 2 / 5,
-    '3/5': 3 / 5,
-    '4/5': 4 / 5,
-    '1/6': 1 / 6,
-    '2/6': 2 / 6,
-    '3/6': 3 / 6,
-    '4/6': 4 / 6,
-    '5/6': 5 / 6,
-    '1/12': 1 / 12,
-    '2/12': 2 / 12,
-    '3/12': 3 / 12,
-    '4/12': 4 / 12,
-    '5/12': 5 / 12,
-    '6/12': 6 / 12,
-    '7/12': 7 / 12,
-    '8/12': 8 / 12,
-    '9/12': 9 / 12,
-    '10/12': 10 / 12,
-    '11/12': 11 / 12,
-    full: 1,
+    0: '0px',
+    px: '1px',
+    0.5: '0.125rem',
+    1: '0.25rem',
+    1.5: '0.375rem',
+    2: '0.5rem',
+    2.5: '0.625rem',
+    3: '0.75rem',
+    3.5: '0.875rem',
+    4: '1rem',
+    5: '1.25rem',
+    6: '1.5rem',
+    7: '1.75rem',
+    8: '2rem',
+    9: '2.25rem',
+    10: '2.5rem',
+    11: '2.75rem',
+    12: '3rem',
+    14: '3.5rem',
+    16: '4rem',
+    20: '5rem',
+    24: '6rem',
+    28: '7rem',
+    32: '8rem',
+    36: '9rem',
+    40: '10rem',
+    44: '11rem',
+    48: '12rem',
+    52: '13rem',
+    56: '14rem',
+    60: '15rem',
+    64: '16rem',
+    72: '18rem',
+    80: '20rem',
+    96: '24rem',
+    auto: 'auto',
+    min: 'min-content',
+    max: 'max-content',
+    '1/2': percent(1 / 2),
+    '1/4': percent(1 / 4),
+    '2/4': percent(2 / 4),
+    '3/4': percent(3 / 4),
+    '1/5': percent(1 / 5),
+    '2/5': percent(2 / 5),
+    '3/5': percent(3 / 5),
+    '4/5': percent(4 / 5),
+    '1/6': percent(1 / 6),
+    '2/6': percent(2 / 6),
+    '3/6': percent(3 / 6),
+    '4/6': percent(4 / 6),
+    '5/6': percent(5 / 6),
+    '1/12': percent(1 / 12),
+    '2/12': percent(2 / 12),
+    '3/12': percent(3 / 12),
+    '4/12': percent(4 / 12),
+    '5/12': percent(5 / 12),
+    '6/12': percent(6 / 12),
+    '7/12': percent(7 / 12),
+    '8/12': percent(8 / 12),
+    '9/12': percent(9 / 12),
+    '10/12': percent(10 / 12),
+    '11/12': percent(11 / 12),
+    full: percent(1),
   },
 };
-
-const createStyle = (...kvs) => {
-  const style = {};
-  for (let i = 0; i < kvs.length; i += 2) {
-    style[hyphenate(kvs[i])] = kvs[i + 1];
-  }
-  return style;
-};
-
-const mapApply = (obj) =>
-  Object.keys(obj.keys).reduce((acc, key) => {
-    Object.keys(obj.values).map((vkey) => {
-      const suffix = vkey ? '-' + vkey : '';
-      if (Array.isArray(obj.keys[key])) {
-        const args = [];
-        obj.keys[key].forEach((kk) => {
-          args.push(kk, obj.values[vkey]);
-        });
-        acc[key + suffix] = createStyle(...args);
-      } else {
-        acc[key + suffix] = createStyle(obj.keys[key], obj.values[vkey]);
-      }
-    });
-    return acc;
-  }, {});
 
 const classLookup = {
   flex: createStyle('display', 'flex'),
@@ -358,43 +438,13 @@ const classLookup = {
   'select-text': createStyle('user-select', 'text'),
   'select-all': createStyle('user-select', 'all'),
   'select-auto': createStyle('user-select', 'auto'),
+  'w-screen': '100vw',
+  'h-screen': '100vh',
   ...mapApply(sizes),
   ...mapApply(spacing),
   ...mapApply(colors),
   ...mapApply(borders),
   ...mapApply(radius),
-};
-
-export const getClassList = (template) => {
-  return template.strings
-    .reduce((acc, item) => {
-      const matches = item.match(/class=(?:["']\W+\s*(?:\w+)\()?["']([^'"]+)['"]/gim);
-      if (matches) {
-        matches.forEach((matched) => {
-          acc += matched.replace('class="', '').replace('"', '') + ' ';
-        });
-      }
-      return acc;
-    }, '')
-    .split(' ')
-    .filter((it) => it !== '');
-};
-
-export const getStyleSheet = (classList) => {
-  let styleSheet = ``;
-  classList.forEach((k) => {
-    const item = classLookup[k];
-    if (item) {
-      styleSheet += `
-        .${k} {
-          ${Object.keys(item)
-            .map((key) => `${key}: ${item[key]};`)
-            .join('\n')}
-        }
-      `;
-    }
-  });
-  return styleSheet;
 };
 
 const lastAttributeNameRegex =
@@ -587,17 +637,24 @@ const stringifyHtml = (buff, doc) => {
 };
 
 const hydrate = (node) => {
+  const Clazz = AtomsElement.getElement(node.name);
+  if (Clazz) {
+    const newAttrs = {};
+    Object.keys(node.attrs).forEach((key) => {
+      const attrType = Clazz.attrTypes[key];
+      if (attrType) {
+        newAttrs[key] = attrType.parse(node.attrs[key]);
+      } else {
+        newAttrs[key] = node.attrs[key];
+      }
+    });
+    const instance = new Clazz(newAttrs);
+    const res = instance.renderTemplate();
+    node.children = parseHtml(res);
+  }
   if (node.children) {
     for (const child of node.children) {
-      const Clazz = AtomsElement.getElement(child.name);
-      if (Clazz) {
-        const instance = new Clazz(child.attrs);
-        const res = instance.renderTemplate();
-        child.children.push(...parseHtml(res));
-      }
-      if (child.children) {
-        hydrate(child);
-      }
+      hydrate(child);
     }
   }
 };
@@ -793,24 +850,24 @@ export class AtomsElement extends BaseElement {
     return Object.keys(this.attrTypes).map((k) => k.toLowerCase());
   }
 
-  constructor(ssrAttributes) {
+  constructor(attrs) {
     super();
-    this.ssrAttributes = ssrAttributes;
     this._dirty = false;
     this._connected = false;
-    this.attrs = {};
+    this.attrs = attrs || {};
     this.state = {};
     this.config = isBrowser ? window.config : global.config;
     this.location = isBrowser ? window.location : global.location;
     this.prevClassList = [];
-    this.initState();
-    this.initAttrs();
+    if (!isBrowser) {
+      this.initState();
+    }
   }
 
   initAttrs() {
     Object.keys(this.constructor.attrTypes).forEach((key) => {
       const attrType = this.constructor.attrTypes[key];
-      const newValue = isBrowser ? this.getAttribute(key.toLowerCase()) : this.ssrAttributes[key.toLowerCase()];
+      const newValue = this.getAttribute(key.toLowerCase());
       const data = attrType.parse(newValue);
       attrType.validate(`<${this.constructor.name}> ${key}`, data);
       this.attrs[key] = data;
@@ -839,9 +896,9 @@ export class AtomsElement extends BaseElement {
 
   connectedCallback() {
     this._connected = true;
-    if (isBrowser) {
-      this.update();
-    }
+    this.initAttrs();
+    this.initState();
+    this.update();
   }
   disconnectedCallback() {
     this._connected = false;
@@ -900,6 +957,7 @@ export class AtomsElement extends BaseElement {
   }
 
   renderTemplate() {
+    console.log('render');
     const template = this.render();
     if (isBrowser) {
       if (!this.styleElement) {
@@ -910,15 +968,8 @@ export class AtomsElement extends BaseElement {
         this.styleElement = document.createElement('style');
         this.appendChild(this.styleElement).textContent = styleSheet;
       } else {
-        const missingClassList = template.values
-          .filter((item) => {
-            if (typeof item === 'string') {
-              const list = item.split(' ');
-              return list.filter((cls) => classLookup[cls] && !this.prevClassList.includes(cls)).length > 0;
-            }
-            return false;
-          })
-          .reduce((acc, str) => acc.concat(str.split(' ')), []);
+        const classList = getClassList(template);
+        const missingClassList = classList.filter((cls) => !this.prevClassList.includes(cls));
         if (missingClassList.length > 0) {
           const styleSheet = getStyleSheet(missingClassList);
           this.styleElement.textContent += '\n' + styleSheet;
@@ -939,7 +990,7 @@ export class AtomsElement extends BaseElement {
     }
   }
 }
-export const getConfig = () => (isBrowser ? window.props.config : global.config);
+export const getConfig = () => (isBrowser ? window.props.config : global.props.config);
 export const getLocation = () => (isBrowser ? window.location : global.location);
 
 export const createElement = ({ name, attrTypes, stateTypes, computedTypes, render }) => {
@@ -952,9 +1003,6 @@ export const createElement = ({ name, attrTypes, stateTypes, computedTypes, rend
 
     static computedTypes = computedTypes ? computedTypes() : {};
 
-    constructor(ssrAttributes) {
-      super(ssrAttributes);
-    }
     render() {
       return render({
         attrs: this.attrs,
