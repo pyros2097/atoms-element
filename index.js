@@ -46,19 +46,20 @@ export const css = (obj, isChild = false, indent = '') => {
   return cssText;
 };
 
+const extractClasses = (html) => {
+  let str = '';
+  const matches = html.match(/class=(?:["']\W+\s*(?:\w+)\()?["']([^'"]+)['"]/gim);
+  if (matches) {
+    matches.forEach((matched, i) => {
+      str += matched.replace('class="', '').replace('"', '') + (i === matches.length - 1 ? '' : ' ');
+    });
+  }
+  return str;
+};
+
 export const getClassList = (template) => {
-  const classes = template.strings
-    .reduce((acc, item) => {
-      const matches = item.match(/class=(?:["']\W+\s*(?:\w+)\()?["']([^'"]+)['"]/gim);
-      if (matches) {
-        matches.forEach((matched) => {
-          acc += matched.replace('class="', '').replace('"', '') + ' ';
-        });
-      }
-      return acc;
-    }, '')
-    .split(' ')
-    .filter((it) => it !== '');
+  // const classes = template.strings.reduce((acc, item) => acc + extractClasses(item), '').split(' ');
+  const classes = [];
   template.values.forEach((item) => {
     if (typeof item === 'string') {
       const list = item.split(' ');
@@ -69,7 +70,20 @@ export const getClassList = (template) => {
   return classes;
 };
 
-export const getStyleSheet = (classList) => {
+export const apply = (classes) => {
+  const classStyles = {};
+  classes.split(' ').forEach((cls) => {
+    const styles = classLookup[cls];
+    if (styles) {
+      Object.keys(styles).forEach((key) => {
+        classStyles[key] = styles[key];
+      });
+    }
+  });
+  return classStyles;
+};
+
+export const generateTWStyleSheet = (classList) => {
   let styleSheet = ``;
   classList.forEach((cls) => {
     const item = classLookup[cls];
@@ -504,7 +518,421 @@ const classLookup = {
   ring: createStyle('box-shadow', ' 0 0 0 calc(3px + 0px) rgba(59, 130, 246, 0.5'),
 };
 
+const pageStyles = {
+  '*, ::before, ::after': {
+    boxSizing: 'border-box',
+    borderWidth: '0',
+    borderStyle: 'solid',
+    borderColor: '#e5e7eb',
+  },
+  hr: { height: '0', color: 'inherit', borderTopWidth: '1px' },
+  'abbr[title]': {
+    WebkitTextDecoration: 'underline dotted',
+    textDecoration: 'underline dotted',
+  },
+  'b, strong': { fontWeight: 'bolder' },
+  'code, kbd, samp, pre': {
+    fontFamily: "ui-monospace, SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace",
+    fontSize: '1em',
+  },
+  small: { fontSize: '80%' },
+  'sub, sup': {
+    fontSize: '75%',
+    lineHeight: 0,
+    position: 'relative',
+    verticalAlign: 'baseline',
+  },
+  sub: { bottom: '-0.25em' },
+  sup: { top: '-0.5em' },
+  table: {
+    textIndent: '0',
+    borderColor: 'inherit',
+    borderCollapse: 'collapse',
+  },
+  'button, input, optgroup, select, textarea': {
+    fontSize: '100%',
+    margin: '0',
+    padding: '0',
+    lineHeight: 'inherit',
+    color: 'inherit',
+  },
+  'button, select': {},
+  "button, [type='button'], [type='reset'], [type='submit']": {},
+  '::-moz-focus-inner': { borderStyle: 'none', padding: '0' },
+  ':-moz-focusring': { outline: '1px dotted ButtonText' },
+  ':-moz-ui-invalid': { boxShadow: 'none' },
+  legend: { padding: '0' },
+  progress: { verticalAlign: 'baseline' },
+  '::-webkit-inner-spin-button, ::-webkit-outer-spin-button': {
+    height: 'auto',
+  },
+  "[type='search']": { WebkitAppearance: 'textfield', outlineOffset: '-2px' },
+  '::-webkit-search-decoration': { WebkitAppearance: 'none' },
+  '::-webkit-file-upload-button': {
+    WebkitAppearance: 'button',
+    font: 'inherit',
+  },
+  summary: { display: 'list-item' },
+  'blockquote, dl, dd, h1, h2, h3, h4, h5, h6, hr, figure, p, pre': {
+    margin: '0',
+  },
+  button: {
+    backgroundImage: 'none',
+    ':focus': {
+      outline: '1px dotted, 5px auto -webkit-focus-ring-color',
+    },
+  },
+  fieldset: { margin: '0', padding: '0' },
+  'ol, ul': { listStyle: 'none', margin: '0', padding: '0' },
+  img: { borderStyle: 'solid' },
+  textarea: { resize: 'vertical' },
+  'input::-moz-placeholder, textarea::-moz-placeholder': {
+    opacity: 1,
+    color: '#9ca3af',
+  },
+  'input:-ms-input-placeholder, textarea:-ms-input-placeholder': {
+    opacity: 1,
+    color: '#9ca3af',
+  },
+  'input::placeholder, textarea::placeholder': {
+    opacity: 1,
+    color: '#9ca3af',
+  },
+  "button, [role='button']": { cursor: 'pointer' },
+  'h1, h2, h3, h4, h5, h6': { fontSize: 'inherit', fontWeight: 'inherit' },
+  a: { color: 'inherit', textDecoration: 'inherit' },
+  'pre, code, kbd, samp': {
+    fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
+  },
+  'img, svg, video, canvas, audio, iframe, embed, object': {
+    display: 'block',
+    verticalAlign: 'middle',
+  },
+  'img, video': { maxWidth: '100%', height: 'auto' },
+  html: {
+    MozTabSize: '4',
+    OTabSize: '4',
+    tabSize: 4,
+    lineHeight: 1.5,
+    WebkitTextSizeAdjust: '100%',
+    fontFamily:
+      "ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji'",
+    width: '100%',
+    height: '100%',
+  },
+  body: {
+    margin: '0px',
+    fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif",
+    lineHeight: 1.4,
+    backgroundColor: 'white',
+    width: '100%',
+    height: '100%',
+    display: 'flex',
+    flexDirection: 'column',
+    flex: '1 1 0%',
+    minWidth: '320px',
+    minHeight: '100vh',
+    fontWeight: 400,
+    color: 'rgba(44, 62, 80, 1)',
+    direction: 'ltr',
+    fontSynthesis: 'none',
+    textRendering: 'optimizeLegibility',
+  },
+};
+
 // hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-100 focus:ring-indigo-500
+
+const previousValues = new WeakMap();
+export const unsafeHTML = isBrowser
+  ? directive((value) => (part) => {
+      if (!(part instanceof NodePart)) {
+        throw new Error('unsafeHTML can only be used in text bindings');
+      }
+      const previousValue = previousValues.get(part);
+      if (previousValue !== undefined && isPrimitive(value) && value === previousValue.value && part.value === previousValue.fragment) {
+        return;
+      }
+      const template = document.createElement('template');
+      template.innerHTML = value; // innerHTML casts to string internally
+      const fragment = document.importNode(template.content, true);
+      part.setValue(fragment);
+      previousValues.set(part, { value, fragment });
+    })
+  : (value) => value;
+
+const logError = (msg) => {
+  if (isBrowser ? window.__DEV__ : global.__DEV) {
+    console.warn(msg);
+  }
+};
+
+const validator = (type, validate) => (innerType) => {
+  const isPrimitiveType = ['number', 'string', 'boolean'].includes(type);
+  const common = {
+    type: type,
+    parse: isPrimitiveType ? (attr) => attr : (attr) => (attr ? JSON.parse(attr.replace(/'/g, `"`)) : null),
+    validate: (context, data) => {
+      if (data === null || typeof data === 'undefined') {
+        if (common.__required) {
+          logError(`'${context}' Field is required`);
+        }
+        return;
+      }
+      if (!isPrimitiveType) {
+        validate(innerType, context, data);
+      } else {
+        const dataType = typeof data;
+        if (dataType !== type) {
+          logError(`'${context}' Expected type '${type}' got type '${dataType}'`);
+        }
+      }
+    },
+  };
+  common.required = () => {
+    common.__required = true;
+    return common;
+  };
+  common.default = (fnOrValue) => {
+    common.__default = fnOrValue;
+    return common;
+  };
+  common.compute = (...args) => {
+    const fn = args[args.length - 1];
+    const deps = args.slice(0, args.length - 1);
+    common.__compute = {
+      fn,
+      deps,
+    };
+    return common;
+  };
+  common.action = (name, fn) => {
+    if (!common.__handlers) {
+      common.__handlers = {};
+    }
+    common.__handlers[name] = fn;
+    return common;
+  };
+  return common;
+};
+
+export const number = validator('number');
+export const string = validator('string');
+export const boolean = validator('boolean');
+export const object = validator('object', (innerType, context, data) => {
+  if (data.constructor !== Object) {
+    logError(`'${context}' Expected object literal '{}' got '${typeof data}'`);
+  }
+  for (const key of Object.keys(innerType)) {
+    const fieldValidator = innerType[key];
+    const item = data[key];
+    fieldValidator.validate(`${context}.${key}`, item);
+  }
+});
+export const array = validator('array', (innerType, context, data) => {
+  if (!Array.isArray(data)) {
+    logError(`Expected Array got ${data}`);
+  }
+  for (let i = 0; i < data.length; i++) {
+    const item = data[i];
+    innerType.validate(`${context}[${i}]`, item);
+  }
+});
+
+const fifo = (q) => q.shift();
+const microtask = (flush) => () => queueMicrotask(flush);
+
+const registry = {};
+const BaseElement = isBrowser ? window.HTMLElement : class {};
+
+export class AtomsElement extends BaseElement {
+  static register() {
+    registry[this.name] = this;
+    if (isBrowser) {
+      if (window.customElements.get(this.name)) {
+        return;
+      } else {
+        window.customElements.define(this.name, registry[this.name]);
+      }
+    }
+  }
+
+  static getElement(name) {
+    return registry[name];
+  }
+
+  static get observedAttributes() {
+    if (!this.attrTypes) {
+      return [];
+    }
+    return Object.keys(this.attrTypes).map((k) => k.toLowerCase());
+  }
+
+  constructor(attrs) {
+    super();
+    this._dirty = false;
+    this._connected = false;
+    this.attrs = attrs || {};
+    this.state = {};
+    this.config = isBrowser ? window.config : global.config;
+    this.location = isBrowser ? window.location : global.location;
+    this.prevClassList = [];
+    if (!isBrowser) {
+      this.initState();
+    } else {
+      // this.shadow = this.attachShadow({ mode: 'open' });
+    }
+  }
+
+  initAttrs() {
+    Object.keys(this.constructor.attrTypes).forEach((key) => {
+      const attrType = this.constructor.attrTypes[key];
+      const newValue = this.getAttribute(key.toLowerCase());
+      const data = attrType.parse(newValue);
+      attrType.validate(`<${this.constructor.name}> ${key}`, data);
+      this.attrs[key] = data;
+    });
+  }
+
+  initState() {
+    Object.keys(this.constructor.stateTypes).forEach((key) => {
+      const stateType = this.constructor.stateTypes[key];
+      if (!this.state[key] && typeof stateType.__default !== 'undefined') {
+        this.state[key] = typeof stateType.__default === 'function' ? stateType.__default(this.attrs, this.state) : stateType.__default;
+      }
+      const setKey = `set${key[0].toUpperCase()}${key.slice(1)}`;
+      this.state[setKey] = (v) => {
+        // TODO: check type on set
+        this.state[key] = typeof v === 'function' ? v(this.state[key]) : v;
+        this.update();
+      };
+      if (stateType.__handlers) {
+        Object.keys(stateType.__handlers).map((hkey) => {
+          this.state[hkey] = () => stateType.__handlers[hkey]({ attrs: this.attrs, state: this.state });
+        });
+      }
+    });
+  }
+
+  connectedCallback() {
+    this._connected = true;
+    this.initAttrs();
+    this.initState();
+    this.update();
+  }
+  disconnectedCallback() {
+    this._connected = false;
+  }
+
+  attributeChangedCallback(key, oldValue, newValue) {
+    if (this._connected) {
+      this.initAttrs();
+      this.update();
+    }
+  }
+
+  update() {
+    if (this._dirty) {
+      return;
+    }
+    this._dirty = true;
+    this.enqueueUpdate();
+  }
+
+  _performUpdate() {
+    if (!this._connected) {
+      return;
+    }
+    this.renderTemplate();
+    this._dirty = false;
+  }
+
+  batch(runner, pick, callback) {
+    const q = [];
+    const flush = () => {
+      let p;
+      while ((p = pick(q))) callback(p);
+    };
+    const run = runner(flush);
+    q.push(this) === 1 && run();
+  }
+
+  enqueueUpdate() {
+    this.batch(microtask, fifo, () => this._performUpdate());
+  }
+
+  get computed() {
+    return Object.keys(this.constructor.computedTypes).reduceRight((acc, key) => {
+      const type = this.constructor.computedTypes[key];
+      const state = this.state;
+      const values = type.__compute.deps.reduce((dacc, key) => {
+        if (typeof state[key] !== undefined) {
+          dacc.push(state[key]);
+        }
+        return dacc;
+      }, []);
+      acc[key] = type.__compute.fn(...values);
+      return acc;
+    }, {});
+  }
+
+  renderTemplate() {
+    const template = this.render();
+    if (isBrowser) {
+      // TODO: this can be optimized when we know whether the value belongs in a class (AttributePart)
+      // maybe do this in lit-html itselfs
+      const newClassList = getClassList(template).filter((cls) => {
+        const globalStyles = document.getElementById('global').textContent;
+        return !globalStyles.includes('.' + cls);
+      });
+      if (newClassList.length > 0) {
+        document.getElementById('global').textContent += generateTWStyleSheet(newClassList);
+      }
+      render(template, this);
+      // For shadows only
+      // if (!this.styleElement) {
+      //   render(template, this.shadow);
+      //   const styleSheet = generateTWStyleSheet(classList);
+      //   this.prevClassList = classList;
+      //   this.styleElement = document.createElement('style');
+      //   this.shadow.appendChild(this.styleElement).textContent = css(pageStyles) + styleSheet;
+      // } else {
+      //   const missingClassList = classList.filter((cls) => !this.prevClassList.includes(cls));
+      //   if (missingClassList.length > 0) {
+      //     const styleSheet = generateTWStyleSheet(missingClassList);
+      //     this.styleElement.textContent += '\n' + styleSheet;
+      //     this.prevClassList.push(...missingClassList);
+      //   }
+      //   render(template, this.shadow);
+      // }
+    } else {
+      return render(template);
+    }
+  }
+}
+export const getConfig = () => (isBrowser ? window.props.config : global.props.config);
+export const getLocation = () => (isBrowser ? window.location : global.location);
+
+export const createElement = ({ name, attrTypes, stateTypes, computedTypes, render }) => {
+  const Element = class extends AtomsElement {
+    static name = name();
+
+    static attrTypes = attrTypes ? attrTypes() : {};
+
+    static stateTypes = stateTypes ? stateTypes() : {};
+
+    static computedTypes = computedTypes ? computedTypes() : {};
+
+    render() {
+      return render({
+        attrs: this.attrs,
+        state: this.state,
+        computed: this.computed,
+      });
+    }
+  };
+  Element.register();
+  return { name, attrTypes, stateTypes, computedTypes, render };
+};
 
 const lastAttributeNameRegex =
   /([ \x09\x0a\x0c\x0d])([^\0-\x1F\x7F-\x9F "'>=/]+)([ \x09\x0a\x0c\x0d]*=[ \x09\x0a\x0c\x0d]*(?:[^ \x09\x0a\x0c\x0d"'`<>=]*|"[^"]*|'[^']*))$/;
@@ -784,301 +1212,12 @@ export const render = isBrowser
       return html;
     };
 
-const previousValues = new WeakMap();
-export const unsafeHTML = isBrowser
-  ? directive((value) => (part) => {
-      if (!(part instanceof NodePart)) {
-        throw new Error('unsafeHTML can only be used in text bindings');
-      }
-      const previousValue = previousValues.get(part);
-      if (previousValue !== undefined && isPrimitive(value) && value === previousValue.value && part.value === previousValue.fragment) {
-        return;
-      }
-      const template = document.createElement('template');
-      template.innerHTML = value; // innerHTML casts to string internally
-      const fragment = document.importNode(template.content, true);
-      part.setValue(fragment);
-      previousValues.set(part, { value, fragment });
-    })
-  : (value) => value;
-
-const logError = (msg) => {
-  if (isBrowser ? window.__DEV__ : global.__DEV) {
-    console.warn(msg);
-  }
-};
-
-const validator = (type, validate) => (innerType) => {
-  const isPrimitiveType = ['number', 'string', 'boolean'].includes(type);
-  const common = {
-    type: type,
-    parse: isPrimitiveType ? (attr) => attr : (attr) => (attr ? JSON.parse(attr.replace(/'/g, `"`)) : null),
-    validate: (context, data) => {
-      if (data === null || typeof data === 'undefined') {
-        if (common.__required) {
-          logError(`'${context}' Field is required`);
-        }
-        return;
-      }
-      if (!isPrimitiveType) {
-        validate(innerType, context, data);
-      } else {
-        const dataType = typeof data;
-        if (dataType !== type) {
-          logError(`'${context}' Expected type '${type}' got type '${dataType}'`);
-        }
-      }
-    },
-  };
-  common.required = () => {
-    common.__required = true;
-    return common;
-  };
-  common.default = (fnOrValue) => {
-    common.__default = fnOrValue;
-    return common;
-  };
-  common.compute = (...args) => {
-    const fn = args[args.length - 1];
-    const deps = args.slice(0, args.length - 1);
-    common.__compute = {
-      fn,
-      deps,
-    };
-    return common;
-  };
-  common.action = (name, fn) => {
-    if (!common.__handlers) {
-      common.__handlers = {};
-    }
-    common.__handlers[name] = fn;
-    return common;
-  };
-  return common;
-};
-
-export const number = validator('number');
-export const string = validator('string');
-export const boolean = validator('boolean');
-export const object = validator('object', (innerType, context, data) => {
-  if (data.constructor !== Object) {
-    logError(`'${context}' Expected object literal '{}' got '${typeof data}'`);
-  }
-  for (const key of Object.keys(innerType)) {
-    const fieldValidator = innerType[key];
-    const item = data[key];
-    fieldValidator.validate(`${context}.${key}`, item);
-  }
-});
-export const array = validator('array', (innerType, context, data) => {
-  if (!Array.isArray(data)) {
-    logError(`Expected Array got ${data}`);
-  }
-  for (let i = 0; i < data.length; i++) {
-    const item = data[i];
-    innerType.validate(`${context}[${i}]`, item);
-  }
-});
-
-const fifo = (q) => q.shift();
-const microtask = (flush) => () => queueMicrotask(flush);
-
-const registry = {};
-const BaseElement = isBrowser ? window.HTMLElement : class {};
-
-export class AtomsElement extends BaseElement {
-  static register() {
-    registry[this.name] = this;
-    if (isBrowser) {
-      if (window.customElements.get(this.name)) {
-        return;
-      } else {
-        window.customElements.define(this.name, registry[this.name]);
-      }
-    }
-  }
-
-  static getElement(name) {
-    return registry[name];
-  }
-
-  static get observedAttributes() {
-    if (!this.attrTypes) {
-      return [];
-    }
-    return Object.keys(this.attrTypes).map((k) => k.toLowerCase());
-  }
-
-  constructor(attrs) {
-    super();
-    this._dirty = false;
-    this._connected = false;
-    this.attrs = attrs || {};
-    this.state = {};
-    this.config = isBrowser ? window.config : global.config;
-    this.location = isBrowser ? window.location : global.location;
-    this.prevClassList = [];
-    if (!isBrowser) {
-      this.initState();
-    }
-  }
-
-  initAttrs() {
-    Object.keys(this.constructor.attrTypes).forEach((key) => {
-      const attrType = this.constructor.attrTypes[key];
-      const newValue = this.getAttribute(key.toLowerCase());
-      const data = attrType.parse(newValue);
-      attrType.validate(`<${this.constructor.name}> ${key}`, data);
-      this.attrs[key] = data;
-    });
-  }
-
-  initState() {
-    Object.keys(this.constructor.stateTypes).forEach((key) => {
-      const stateType = this.constructor.stateTypes[key];
-      if (!this.state[key] && typeof stateType.__default !== 'undefined') {
-        this.state[key] = typeof stateType.__default === 'function' ? stateType.__default(this.attrs, this.state) : stateType.__default;
-      }
-      const setKey = `set${key[0].toUpperCase()}${key.slice(1)}`;
-      this.state[setKey] = (v) => {
-        // TODO: check type on set
-        this.state[key] = typeof v === 'function' ? v(this.state[key]) : v;
-        this.update();
-      };
-      if (stateType.__handlers) {
-        Object.keys(stateType.__handlers).map((hkey) => {
-          this.state[hkey] = () => stateType.__handlers[hkey]({ attrs: this.attrs, state: this.state });
-        });
-      }
-    });
-  }
-
-  connectedCallback() {
-    this._connected = true;
-    this.initAttrs();
-    this.initState();
-    this.update();
-  }
-  disconnectedCallback() {
-    this._connected = false;
-  }
-
-  attributeChangedCallback(key, oldValue, newValue) {
-    if (this._connected) {
-      this.initAttrs();
-      this.update();
-    }
-  }
-
-  update() {
-    if (this._dirty) {
-      return;
-    }
-    this._dirty = true;
-    this.enqueueUpdate();
-  }
-
-  _performUpdate() {
-    if (!this._connected) {
-      return;
-    }
-    this.renderTemplate();
-    this._dirty = false;
-  }
-
-  batch(runner, pick, callback) {
-    const q = [];
-    const flush = () => {
-      let p;
-      while ((p = pick(q))) callback(p);
-    };
-    const run = runner(flush);
-    q.push(this) === 1 && run();
-  }
-
-  enqueueUpdate() {
-    this.batch(microtask, fifo, () => this._performUpdate());
-  }
-
-  get computed() {
-    return Object.keys(this.constructor.computedTypes).reduceRight((acc, key) => {
-      const type = this.constructor.computedTypes[key];
-      const state = this.state;
-      const values = type.__compute.deps.reduce((dacc, key) => {
-        if (typeof state[key] !== undefined) {
-          dacc.push(state[key]);
-        }
-        return dacc;
-      }, []);
-      acc[key] = type.__compute.fn(...values);
-      return acc;
-    }, {});
-  }
-
-  renderTemplate() {
-    const template = this.render();
-    if (isBrowser) {
-      if (!this.styleElement) {
-        render(template, this);
-        const classList = getClassList(template);
-        const styleSheet = getStyleSheet(classList);
-        this.prevClassList = classList;
-        this.styleElement = document.createElement('style');
-        this.appendChild(this.styleElement).textContent = styleSheet;
-      } else {
-        const classList = getClassList(template);
-        const missingClassList = classList.filter((cls) => !this.prevClassList.includes(cls));
-        if (missingClassList.length > 0) {
-          const styleSheet = getStyleSheet(missingClassList);
-          this.styleElement.textContent += '\n' + styleSheet;
-          this.prevClassList.push(...missingClassList);
-        }
-        render(template, this);
-      }
-    } else {
-      const result = render(template, this);
-      const classList = getClassList(template);
-      const styleSheet = getStyleSheet(classList);
-      return `
-        ${result}
-        <style>
-        ${styleSheet}
-        </style>
-      `;
-    }
-  }
-}
-export const getConfig = () => (isBrowser ? window.props.config : global.props.config);
-export const getLocation = () => (isBrowser ? window.location : global.location);
-
-export const createElement = ({ name, attrTypes, stateTypes, computedTypes, render }) => {
-  const Element = class extends AtomsElement {
-    static name = name();
-
-    static attrTypes = attrTypes ? attrTypes() : {};
-
-    static stateTypes = stateTypes ? stateTypes() : {};
-
-    static computedTypes = computedTypes ? computedTypes() : {};
-
-    render() {
-      return render({
-        attrs: this.attrs,
-        state: this.state,
-        computed: this.computed,
-      });
-    }
-  };
-  Element.register();
-  return { name, attrTypes, stateTypes, computedTypes, render };
-};
-
-export const createPage = ({ route, datapaths, head, body }) => {
+export const createPage = ({ head, body }) => {
   return ({ headScript, bodyScript, lang, props }) => {
     const isProd = process.env.NODE_ENV === 'production';
     const headHtml = render(head(props));
-    const bodyTemplate = body(props);
-    const bodyHtml = render(bodyTemplate);
+    const bodyHtml = render(body(props));
+    const classes = extractClasses(bodyHtml);
     return `
       <!DOCTYPE html>
       <html lang="${lang}">
@@ -1090,8 +1229,9 @@ export const createPage = ({ route, datapaths, head, body }) => {
           <link rel="sitemap" type="application/xml" href="/sitemap.xml" />
           <link rel="icon" type="image/png" href="/assets/icon.png" />
           ${headHtml}
-          <style>
-            ${getStyleSheet(getClassList(bodyTemplate))}
+          <style id="global">
+            ${css(pageStyles)}
+            ${generateTWStyleSheet(new Set(classes.split(' ')))}
           </style>
           ${headScript}
         </head>
