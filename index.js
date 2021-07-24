@@ -91,11 +91,13 @@ const colors = {
   keys: {
     bg: 'backgroundColor',
     text: 'color',
-    b: 'borderColor',
-    bl: 'borderLeftColor',
-    br: 'borderRightColor',
-    bt: 'borderTopColor',
-    bb: 'borderBottomColor',
+    divide: 'borderColor',
+    border: 'borderColor',
+    ring: '--tw-ring-color',
+    'border-l': 'borderLeftColor',
+    'border-r': 'borderRightColor',
+    'border-t': 'borderTopColor',
+    'border-b': 'borderBottomColor',
   },
   values: {
     transparent: 'transparent',
@@ -269,11 +271,11 @@ const radius = {
 
 const borders = {
   keys: {
-    bw: 'borderWidth',
-    bwl: 'borderLeftWidth',
-    bwr: 'borderRightWidth',
-    bwt: 'borderTopWidth',
-    bwb: 'borderBottomWidth',
+    border: 'borderWidth',
+    'border-l': 'borderLeftWidth',
+    'border-r': 'borderRightWidth',
+    'border-t': 'borderTopWidth',
+    'border-b': 'borderBottomWidth',
   },
   values: {
     '': '1px',
@@ -288,6 +290,10 @@ const sizes = {
   keys: {
     h: 'height',
     w: 'width',
+    top: 'top',
+    left: 'left',
+    bottom: 'bottom',
+    right: 'right',
     minh: 'minHeight',
     minw: 'minWidth',
     maxh: 'maxHeight',
@@ -362,7 +368,17 @@ const sizes = {
 
 const classLookup = {
   flex: createStyle('display', 'flex'),
+  'inline-flex': createStyle('display', 'inline-flex'),
   block: createStyle('display', 'block'),
+  'inline-block': createStyle('display', 'inline-block'),
+  inline: createStyle('display', 'inline'),
+  table: createStyle('display', 'table'),
+  'inline-table': createStyle('display', 'inline-table'),
+  'inline-table': createStyle('display', 'inline-table'),
+  grid: createStyle('display', 'grid'),
+  'inline-grid': createStyle('display', 'inline-grid'),
+  contents: createStyle('display', 'contents'),
+  'list-item': createStyle('display', 'list-item'),
   hidden: createStyle('display', 'none'),
   'flex-1': createStyle('flex', '1'),
   'flex-row': createStyle('flexDirection', 'row'),
@@ -397,11 +413,11 @@ const classLookup = {
   'break-words': createStyle('wordBreak', 'break-word'),
   'break-all': createStyle('wordBreak', 'break-all'),
   'font-sans': createStyle(
-    'font-family',
+    'fontFamily',
     `ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"`,
   ),
-  'font-serif': createStyle('font-family', `ui-serif, Georgia, Cambria, "Times New Roman", Times, serif`),
-  'font-mono': createStyle('font-family', `ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace`),
+  'font-serif': createStyle('fontFamily', `ui-serif, Georgia, Cambria, "Times New Roman", Times, serif`),
+  'font-mono': createStyle('fontFamily', `ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace`),
   'font-thin': createStyle('fontWeight', '100'),
   'font-extralight': createStyle('fontWeight', '200'),
   'font-light': createStyle('fontWeight', '300'),
@@ -432,12 +448,12 @@ const classLookup = {
   'cursor-move': createStyle('cursor', 'move'),
   'cursor-help': createStyle('cursor', 'help'),
   'cursor-not-allowed': createStyle('cursor', 'not-allowed'),
-  'pointer-events-none': createStyle('pointer-events', 'none'),
-  'pointer-events-auto': createStyle('pointer-events', 'auto'),
-  'select-none': createStyle('user-select', 'none'),
-  'select-text': createStyle('user-select', 'text'),
-  'select-all': createStyle('user-select', 'all'),
-  'select-auto': createStyle('user-select', 'auto'),
+  'pointer-events-none': createStyle('pointerEvents', 'none'),
+  'pointer-events-auto': createStyle('pointerEvents', 'auto'),
+  'select-none': createStyle('userSelect', 'none'),
+  'select-text': createStyle('userSelect', 'text'),
+  'select-all': createStyle('userSelect', 'all'),
+  'select-auto': createStyle('userSelect', 'auto'),
   'w-screen': '100vw',
   'h-screen': '100vh',
   ...mapApply(sizes),
@@ -445,7 +461,50 @@ const classLookup = {
   ...mapApply(colors),
   ...mapApply(borders),
   ...mapApply(radius),
+  static: createStyle('position', 'static'),
+  fixed: createStyle('position', 'fixed'),
+  absolute: createStyle('absolute', 'fixed'),
+  relative: createStyle('relative', 'fixed'),
+  sticky: createStyle('sticky', 'fixed'),
+  'overflow-auto': createStyle('overflow', 'auto'),
+  'overflow-hidden': createStyle('overflow', 'hidden'),
+  'overflow-visible': createStyle('overflow', 'visible'),
+  'overflow-scroll': createStyle('overflow', 'scroll'),
+  'overflow-x-auto': createStyle('overflowX', 'auto'),
+  'overflow-y-auto': createStyle('overflowY', 'auto'),
+  'overflow-x-hidden': createStyle('overflowX', 'hidden'),
+  'overflow-y-hidden': createStyle('overflowY', 'hidden'),
+  'overflow-x-visible': createStyle('overflowX', 'visible'),
+  'overflow-y-visible': createStyle('overflowY', 'visible'),
+  'overflow-x-scroll': createStyle('overflowX', 'scroll'),
+  'overflow-y-scroll': createStyle('overflowY', 'scroll'),
+  'origin-center': createStyle('transformOrigin', 'center'),
+  'origin-top': createStyle('transformOrigin', 'top'),
+  'origin-top-right': createStyle('transformOrigin', 'top right'),
+  'origin-right': createStyle('transformOrigin', 'right'),
+  'origin-bottom-right': createStyle('transformOrigin', 'bottom right'),
+  'origin-bottom': createStyle('transformOrigin', 'bottom'),
+  'origin-bottom-left': createStyle('transformOrigin', 'bottom left'),
+  'origin-left': createStyle('transformOrigin', 'left'),
+  'origin-top-left': createStyle('transformOrigin', 'top left'),
+  'shadow-sm': createStyle('box-shadow', '0 0 #0000, 0 0 #0000, 0 1px 2px 0 rgba(0, 0, 0, 0.05'),
+  shadow: createStyle('box-shadow', '0 0 #0000, 0 0 #0000, 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06'),
+  'shadow-md': createStyle('box-shadow', '0 0 #0000, 0 0 #0000, 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06'),
+  'shadow-lg': createStyle('box-shadow', '0 0 #0000, 0 0 #0000, 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05'),
+  'shadow-xl': createStyle('box-shadow', '0 0 #0000, 0 0 #0000, 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04'),
+  'shadow-2xl': createStyle('box-shadow', '0 0 #0000, 0 0 #0000, 0 25px 50px -12px rgba(0, 0, 0, 0.25'),
+  'shadow-inner': createStyle('box-shadow', '0 0 #0000, 0 0 #0000, inset 0 2px 4px 0 rgba(0, 0, 0, 0.06'),
+  'shadow-none': createStyle('box-shadow', '0 0 #0000, 0 0 #0000, 0 0 #0000'),
+  'ring-inset': createStyle('--tw-ring-inset', 'insest'),
+  'ring-0': createStyle('box-shadow', ' 0 0 0 calc(0px + 0px) rgba(59, 130, 246, 0.5'),
+  'ring-1': createStyle('box-shadow', ' 0 0 0 calc(1px + 0px) rgba(59, 130, 246, 0.5'),
+  'ring-2': createStyle('box-shadow', ' 0 0 0 calc(2px + 0px) rgba(59, 130, 246, 0.5'),
+  'ring-4': createStyle('box-shadow', ' 0 0 0 calc(4px + 0px) rgba(59, 130, 246, 0.5'),
+  'ring-8': createStyle('box-shadow', ' 0 0 0 calc(8px + 0px) rgba(59, 130, 246, 0.5'),
+  ring: createStyle('box-shadow', ' 0 0 0 calc(3px + 0px) rgba(59, 130, 246, 0.5'),
 };
+
+// hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-100 focus:ring-indigo-500
 
 const lastAttributeNameRegex =
   /([ \x09\x0a\x0c\x0d])([^\0-\x1F\x7F-\x9F "'>=/]+)([ \x09\x0a\x0c\x0d]*=[ \x09\x0a\x0c\x0d]*(?:[^ \x09\x0a\x0c\x0d"'`<>=]*|"[^"]*|'[^']*))$/;
@@ -957,7 +1016,6 @@ export class AtomsElement extends BaseElement {
   }
 
   renderTemplate() {
-    console.log('render');
     const template = this.render();
     if (isBrowser) {
       if (!this.styleElement) {

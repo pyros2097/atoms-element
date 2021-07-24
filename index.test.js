@@ -273,8 +273,8 @@ test('AtomsElement', async () => {
   const Clazz = AtomsElement.getElement('app-item');
   expect(Clazz.name).toEqual(AppItem.name);
   const instance = new AppItem({
-    address: JSON.stringify({ street: '123' }).replace(/"/g, `'`),
-    perpage: '1',
+    address: { street: '123' },
+    perPage: '1',
   });
   instance.renderItem = () => html`<div><p>render item 1</p></div>`;
   expect(AppItem.observedAttributes).toEqual(['perpage', 'address']);
