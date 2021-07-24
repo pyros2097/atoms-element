@@ -1,4 +1,4 @@
-import { createElement, html, object, number, string, unsafeHTML } from '../index.js';
+import { createElement, html, object, number, string } from '../index.js';
 
 const name = () => 'app-counter';
 

@@ -11,12 +11,11 @@ const port = process.argv[2] || 3000;
 const srcMap = {
   '/index.js': `${__dirname}/../index.js`,
   '/lit-html.js': `${__dirname}/../lit-html.js`,
-  '/styles.js': `${__dirname}/styles.js`,
   '/app-counter.js': `${__dirname}/app-counter.js`,
 };
 
 http
-  .createServer(function (req, res) {
+  .createServer((req, res) => {
     if (req.url === '/') {
       res.statusCode = 200;
       res.setHeader('Content-type', 'text/html');

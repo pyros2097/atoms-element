@@ -1,14 +1,8 @@
-import { createPage, html, css } from '../index.js';
-import { pageStyles } from './styles.js';
+import { createPage, html } from '../index.js';
 import './app-counter.js';
 
 const head = ({ config }) => {
-  return html`
-    <title>${config.title}</title>
-    <style>
-      ${css(pageStyles)}
-    </style>
-  `;
+  return html` <title>${config.title}</title> `;
 };
 
 const body = () => {
