@@ -3,6 +3,280 @@ import { html, render as litRender, directive, NodePart, isPrimitive } from './l
 const isBrowser = typeof window !== 'undefined';
 export { html, isBrowser };
 
+const lastAttributeNameRegex =
+  /([ \x09\x0a\x0c\x0d])([^\0-\x1F\x7F-\x9F "'>=/]+)([ \x09\x0a\x0c\x0d]*=[ \x09\x0a\x0c\x0d]*(?:[^ \x09\x0a\x0c\x0d"'`<>=]*|"[^"]*|'[^']*))$/;
+const tagRE = /<[a-zA-Z0-9\-\!\/](?:"[^"]*"|'[^']*'|[^'">])*>/g;
+const whitespaceRE = /^\s*$/;
+const attrRE = /\s([^'"/\s><]+?)[\s/>]|([^\s=]+)=\s?(".*?"|'.*?')/g;
+const voidElements = ['area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta', 'param', 'source', 'track', 'wbr'];
+
+const parseTag = (tag) => {
+  const res = {
+    type: 'tag',
+    name: '',
+    voidElement: false,
+    attrs: {},
+    children: [],
+  };
+
+  const tagMatch = tag.match(/<\/?([^\s]+?)[/\s>]/);
+  if (tagMatch) {
+    res.name = tagMatch[1];
+    if (voidElements.includes(tagMatch[1]) || tag.charAt(tag.length - 2) === '/') {
+      res.voidElement = true;
+    }
+
+    // handle comment tag
+    if (res.name.startsWith('!--')) {
+      const endIndex = tag.indexOf('-->');
+      return {
+        type: 'comment',
+        comment: endIndex !== -1 ? tag.slice(4, endIndex) : '',
+      };
+    }
+  }
+
+  const reg = new RegExp(attrRE);
+  let result = null;
+  for (;;) {
+    result = reg.exec(tag);
+
+    if (result === null) {
+      break;
+    }
+
+    if (!result[0].trim()) {
+      continue;
+    }
+
+    if (result[1]) {
+      const attr = result[1].trim();
+      let arr = [attr, ''];
+
+      if (attr.indexOf('=') > -1) {
+        arr = attr.split('=');
+      }
+
+      res.attrs[arr[0]] = arr[1];
+      reg.lastIndex--;
+    } else if (result[2]) {
+      res.attrs[result[2]] = result[3].trim().substring(1, result[3].length - 1);
+    }
+  }
+
+  return res;
+};
+const parseHtml = (html) => {
+  const result = [];
+  const arr = [];
+  let current;
+  let level = -1;
+
+  // handle text at top level
+  if (html.indexOf('<') !== 0) {
+    var end = html.indexOf('<');
+    result.push({
+      type: 'text',
+      content: end === -1 ? html : html.substring(0, end),
+    });
+  }
+
+  html.replace(tagRE, function (tag, index) {
+    const isOpen = tag.charAt(1) !== '/';
+    const isComment = tag.startsWith('<!--');
+    const start = index + tag.length;
+    const nextChar = html.charAt(start);
+    let parent;
+
+    if (isComment) {
+      const comment = parseTag(tag);
+
+      // if we're at root, push new base node
+      if (level < 0) {
+        result.push(comment);
+        return result;
+      }
+      parent = arr[level];
+      parent.children.push(comment);
+      return result;
+    }
+
+    if (isOpen) {
+      level++;
+
+      current = parseTag(tag);
+
+      if (!current.voidElement && nextChar && nextChar !== '<') {
+        current.children.push({
+          type: 'text',
+          content: html.slice(start, html.indexOf('<', start)),
+        });
+      }
+
+      // if we're at root, push new base node
+      if (level === 0) {
+        result.push(current);
+      }
+
+      parent = arr[level - 1];
+
+      if (parent) {
+        parent.children.push(current);
+      }
+
+      arr[level] = current;
+    }
+
+    if (!isOpen || current.voidElement) {
+      if (level > -1 && (current.voidElement || current.name === tag.slice(2, -1))) {
+        level--;
+        // move current up a level to match the end tag
+        current = level === -1 ? result : arr[level];
+      }
+      if (nextChar !== '<' && nextChar) {
+        // trailing text node
+        // if we're at the root, push a base text node. otherwise add as
+        // a child to the current node.
+        parent = level === -1 ? result : arr[level].children;
+
+        // calculate correct end of the content slice in case there's
+        // no tag after the text node.
+        const end = html.indexOf('<', start);
+        let content = html.slice(start, end === -1 ? undefined : end);
+        // if a node is nothing but whitespace, collapse it as the spec states:
+        // https://www.w3.org/TR/html4/struct/text.html#h-9.1
+        if (whitespaceRE.test(content)) {
+          content = ' ';
+        }
+        // don't add whitespace-only text nodes if they would be trailing text nodes
+        // or if they would be leading whitespace-only text nodes:
+        //  * end > -1 indicates this is not a trailing text node
+        //  * leading node is when level is -1 and parent has length 0
+        if ((end > -1 && level + parent.length >= 0) || content !== ' ') {
+          parent.push({
+            type: 'text',
+            content: content,
+          });
+        }
+      }
+    }
+  });
+
+  return result;
+};
+
+const stringifyAttrs = (attrs) => {
+  const buff = [];
+  for (let key in attrs) {
+    buff.push(key + '="' + attrs[key] + '"');
+  }
+  if (!buff.length) {
+    return '';
+  }
+  return ' ' + buff.join(' ');
+};
+
+const stringifyHtml = (buff, doc) => {
+  switch (doc.type) {
+    case 'text':
+      return buff + doc.content;
+    case 'tag':
+      buff += '<' + doc.name + (doc.attrs ? stringifyAttrs(doc.attrs) : '') + (doc.voidElement ? '/>' : '>');
+      if (doc.voidElement) {
+        return buff;
+      }
+      return buff + doc.children.reduce(stringifyHtml, '') + '</' + doc.name + '>';
+    case 'comment':
+      buff += '<!--' + doc.comment + '-->';
+      return buff;
+  }
+};
+
+const hydrate = (node) => {
+  const Clazz = getElement(node.name);
+  if (Clazz) {
+    const newAttrs = {};
+    Object.keys(node.attrs).forEach((key) => {
+      const newValue = node.attrs[key];
+      newAttrs[key] = newValue && newValue.startsWith(`{`) ? JSON.parse(newValue.replace(/'/g, `"`)) : newValue;
+    });
+    const instance = new Clazz(newAttrs);
+    const res = instance.render();
+    node.children = parseHtml(res);
+  }
+  if (node.children) {
+    for (const child of node.children) {
+      hydrate(child);
+    }
+  }
+};
+
+const wrapAttribute = (attrName, suffix, text, v) => {
+  let buffer = text;
+  const hasQuote = suffix && suffix.includes(`="`);
+  if (attrName && !hasQuote) {
+    buffer += `"`;
+  }
+  buffer += v;
+  if (attrName && !hasQuote) {
+    buffer += `"`;
+  }
+  return buffer;
+};
+
+export const renderHtml = isBrowser
+  ? litRender
+  : (template) => {
+      let js = '';
+      template.strings.forEach((text, i) => {
+        const value = template.values[i];
+        const type = typeof value;
+        let attrName, suffix;
+        const matchName = lastAttributeNameRegex.exec(text);
+        if (matchName) {
+          attrName = matchName[2];
+          suffix = matchName[3];
+        }
+        if (value === null || !(type === 'object' || type === 'function' || type === 'undefined')) {
+          js += wrapAttribute(attrName, suffix, text, type !== 'string' ? String(value) : value);
+        } else if (Array.isArray(value) && value.find((item) => item && item.strings && item.type === 'html')) {
+          js += text;
+          value.forEach((v) => {
+            js += renderHtml(v);
+          });
+        } else if (type === 'object') {
+          // TemplateResult
+          if (value.strings && value.type === 'html') {
+            js += text;
+            js += renderHtml(value);
+          } else {
+            js += wrapAttribute(attrName, suffix, text, JSON.stringify(value).replace(/"/g, `'`));
+          }
+        } else if (type == 'function') {
+          if (attrName) {
+            js += text.replace(' ' + attrName + '=', '');
+          } else {
+            // js += text;
+            // js += value();
+          }
+        } else if (type !== 'undefined') {
+          js += text;
+          js += value.toString();
+        } else {
+          js += text;
+          // console.log('value', value);
+        }
+      });
+      const nodes = parseHtml(js);
+      for (const node of nodes) {
+        hydrate(node);
+      }
+      const html = nodes.reduce((acc, node) => {
+        return acc + stringifyHtml('', node);
+      }, '');
+      return html;
+    };
+
 const hyphenate = (s) => s.replace(/[A-Z]|^ms/g, '-$&').toLowerCase();
 const percent = (v) => (v * 100).toFixed(2) + '%';
 const createStyle = (...kvs) => {
@@ -57,7 +331,8 @@ const extractClasses = (html) => {
   return str;
 };
 
-export const getClassList = (template) => {
+const getClassList = (template) => {
+  // need to have this incase of shadowDom
   // const classes = template.strings.reduce((acc, item) => acc + extractClasses(item), '').split(' ');
   const classes = [];
   template.values.forEach((item) => {
@@ -68,19 +343,6 @@ export const getClassList = (template) => {
     return false;
   });
   return classes;
-};
-
-export const apply = (classes) => {
-  const classStyles = {};
-  classes.split(' ').forEach((cls) => {
-    const styles = classLookup[cls];
-    if (styles) {
-      Object.keys(styles).forEach((key) => {
-        classStyles[key] = styles[key];
-      });
-    }
-  });
-  return classStyles;
 };
 
 export const generateTWStyleSheet = (classList) => {
@@ -660,563 +922,160 @@ export const unsafeHTML = isBrowser
     })
   : (value) => value;
 
-const logError = (msg) => {
-  if (isBrowser ? window.__DEV__ : global.__DEV) {
-    console.warn(msg);
-  }
-};
-
-const validator = (type, validate) => (innerType) => {
-  const isPrimitiveType = ['number', 'string', 'boolean'].includes(type);
-  const common = {
-    type: type,
-    parse: isPrimitiveType ? (attr) => attr : (attr) => (attr ? JSON.parse(attr.replace(/'/g, `"`)) : null),
-    validate: (context, data) => {
-      if (data === null || typeof data === 'undefined') {
-        if (common.__required) {
-          logError(`'${context}' Field is required`);
-        }
-        return;
-      }
-      if (!isPrimitiveType) {
-        validate(innerType, context, data);
-      } else {
-        const dataType = typeof data;
-        if (dataType !== type) {
-          logError(`'${context}' Expected type '${type}' got type '${dataType}'`);
-        }
-      }
-    },
-  };
-  common.required = () => {
-    common.__required = true;
-    return common;
-  };
-  common.default = (fnOrValue) => {
-    common.__default = fnOrValue;
-    return common;
-  };
-  common.compute = (...args) => {
-    const fn = args[args.length - 1];
-    const deps = args.slice(0, args.length - 1);
-    common.__compute = {
-      fn,
-      deps,
-    };
-    return common;
-  };
-  common.action = (name, fn) => {
-    if (!common.__handlers) {
-      common.__handlers = {};
-    }
-    common.__handlers[name] = fn;
-    return common;
-  };
-  return common;
-};
-
-export const number = validator('number');
-export const string = validator('string');
-export const boolean = validator('boolean');
-export const object = validator('object', (innerType, context, data) => {
-  if (data.constructor !== Object) {
-    logError(`'${context}' Expected object literal '{}' got '${typeof data}'`);
-  }
-  for (const key of Object.keys(innerType)) {
-    const fieldValidator = innerType[key];
-    const item = data[key];
-    fieldValidator.validate(`${context}.${key}`, item);
-  }
-});
-export const array = validator('array', (innerType, context, data) => {
-  if (!Array.isArray(data)) {
-    logError(`Expected Array got ${data}`);
-  }
-  for (let i = 0; i < data.length; i++) {
-    const item = data[i];
-    innerType.validate(`${context}[${i}]`, item);
-  }
-});
-
 const fifo = (q) => q.shift();
 const microtask = (flush) => () => queueMicrotask(flush);
 
-const registry = {};
-const BaseElement = isBrowser ? window.HTMLElement : class {};
-
-export class AtomsElement extends BaseElement {
-  static register() {
-    registry[this.name] = this;
-    if (isBrowser) {
-      if (window.customElements.get(this.name)) {
-        return;
-      } else {
-        window.customElements.define(this.name, registry[this.name]);
-      }
-    }
-  }
-
-  static getElement(name) {
-    return registry[name];
-  }
-
-  static get observedAttributes() {
-    if (!this.attrTypes) {
-      return [];
-    }
-    return Object.keys(this.attrTypes).map((k) => k.toLowerCase());
-  }
-
-  constructor(attrs) {
-    super();
-    this._dirty = false;
-    this._connected = false;
-    this.attrs = attrs || {};
-    this.state = {};
-    this.config = isBrowser ? window.config : global.config;
-    this.location = isBrowser ? window.location : global.location;
-    this.prevClassList = [];
-    if (!isBrowser) {
-      this.initState();
-    } else {
-      // this.shadow = this.attachShadow({ mode: 'open' });
-    }
-  }
-
-  initAttrs() {
-    Object.keys(this.constructor.attrTypes).forEach((key) => {
-      const attrType = this.constructor.attrTypes[key];
-      const newValue = this.getAttribute(key.toLowerCase());
-      const data = attrType.parse(newValue);
-      attrType.validate(`<${this.constructor.name}> ${key}`, data);
-      this.attrs[key] = data;
-    });
-  }
-
-  initState() {
-    Object.keys(this.constructor.stateTypes).forEach((key) => {
-      const stateType = this.constructor.stateTypes[key];
-      if (!this.state[key] && typeof stateType.__default !== 'undefined') {
-        this.state[key] = typeof stateType.__default === 'function' ? stateType.__default(this.attrs, this.state) : stateType.__default;
-      }
-      const setKey = `set${key[0].toUpperCase()}${key.slice(1)}`;
-      this.state[setKey] = (v) => {
-        // TODO: check type on set
-        this.state[key] = typeof v === 'function' ? v(this.state[key]) : v;
-        this.update();
-      };
-      if (stateType.__handlers) {
-        Object.keys(stateType.__handlers).map((hkey) => {
-          this.state[hkey] = () => stateType.__handlers[hkey]({ attrs: this.attrs, state: this.state });
+export const createState = ({ state, reducer }) => {
+  let initial = state;
+  const subs = new Set();
+  return {
+    getValue: () => initial,
+    subscribe: (fn) => {
+      subs.add(fn);
+    },
+    unsubscribe: (fn) => {
+      subs.remove(fn);
+    },
+    actions: Object.keys(reducer).reduce((acc, key) => {
+      const reduce = reducer[key];
+      acc[key] = (v) => {
+        initial = reduce(initial, v);
+        subs.forEach((sub) => {
+          sub(initial);
         });
-      }
-    });
-  }
-
-  connectedCallback() {
-    this._connected = true;
-    this.initAttrs();
-    this.initState();
-    this.update();
-  }
-  disconnectedCallback() {
-    this._connected = false;
-  }
-
-  attributeChangedCallback(key, oldValue, newValue) {
-    if (this._connected) {
-      this.initAttrs();
-      this.update();
-    }
-  }
-
-  update() {
-    if (this._dirty) {
-      return;
-    }
-    this._dirty = true;
-    this.enqueueUpdate();
-  }
-
-  _performUpdate() {
-    if (!this._connected) {
-      return;
-    }
-    this.renderTemplate();
-    this._dirty = false;
-  }
-
-  batch(runner, pick, callback) {
-    const q = [];
-    const flush = () => {
-      let p;
-      while ((p = pick(q))) callback(p);
-    };
-    const run = runner(flush);
-    q.push(this) === 1 && run();
-  }
-
-  enqueueUpdate() {
-    this.batch(microtask, fifo, () => this._performUpdate());
-  }
-
-  get computed() {
-    return Object.keys(this.constructor.computedTypes).reduceRight((acc, key) => {
-      const type = this.constructor.computedTypes[key];
-      const state = this.state;
-      const values = type.__compute.deps.reduce((dacc, key) => {
-        if (typeof state[key] !== undefined) {
-          dacc.push(state[key]);
-        }
-        return dacc;
-      }, []);
-      acc[key] = type.__compute.fn(...values);
+      };
       return acc;
-    }, {});
-  }
+    }, {}),
+  };
+};
 
-  renderTemplate() {
-    const template = this.render();
-    if (isBrowser) {
-      // TODO: this can be optimized when we know whether the value belongs in a class (AttributePart)
-      // maybe do this in lit-html itselfs
-      const newClassList = getClassList(template).filter((cls) => {
-        const globalStyles = document.getElementById('global').textContent;
-        return !globalStyles.includes('.' + cls);
-      });
-      if (newClassList.length > 0) {
-        document.getElementById('global').textContent += generateTWStyleSheet(newClassList);
-      }
-      render(template, this);
-      // For shadows only
-      // if (!this.styleElement) {
-      //   render(template, this.shadow);
-      //   const styleSheet = generateTWStyleSheet(classList);
-      //   this.prevClassList = classList;
-      //   this.styleElement = document.createElement('style');
-      //   this.shadow.appendChild(this.styleElement).textContent = css(pageStyles) + styleSheet;
-      // } else {
-      //   const missingClassList = classList.filter((cls) => !this.prevClassList.includes(cls));
-      //   if (missingClassList.length > 0) {
-      //     const styleSheet = generateTWStyleSheet(missingClassList);
-      //     this.styleElement.textContent += '\n' + styleSheet;
-      //     this.prevClassList.push(...missingClassList);
-      //   }
-      //   render(template, this.shadow);
-      // }
-    } else {
-      return render(template);
-    }
-  }
-}
+const registry = {};
 export const getConfig = () => (isBrowser ? window.props.config : global.props.config);
 export const getLocation = () => (isBrowser ? window.location : global.location);
+export const getElement = (name) => registry[name];
+export const registerElement = (name, clazz) => {
+  registry[name] = clazz;
+  if (isBrowser) {
+    if (window.customElements.get(name)) {
+      return;
+    } else {
+      window.customElements.define(name, registry[name]);
+    }
+  }
+};
+const BaseElement = isBrowser ? window.HTMLElement : class {};
+export const createElement = ({ name, attrs, state, reducer, render: renderFn }) => {
+  const Element = class extends BaseElement {
+    static get observedAttributes() {
+      return Object.keys(attrs || {}).map((k) => k.toLowerCase());
+    }
 
-export const createElement = ({ name, attrTypes, stateTypes, computedTypes, render }) => {
-  const Element = class extends AtomsElement {
-    static name = name();
+    constructor(ssrAttrs) {
+      super();
+      this._dirty = false;
+      this._connected = false;
+      this.attrs = ssrAttrs || attrs;
+      this.state = createState({ state, reducer });
+      this.config = isBrowser ? window.config : global.config;
+      this.location = isBrowser ? window.location : global.location;
+      // this.prevClassList = [];
+      // this.shadow = this.attachShadow({ mode: 'open' });
+    }
 
-    static attrTypes = attrTypes ? attrTypes() : {};
+    connectedCallback() {
+      this._connected = true;
+      this.state.subscribe(() => this.update());
+      this.update();
+    }
 
-    static stateTypes = stateTypes ? stateTypes() : {};
+    disconnectedCallback() {
+      this._connected = false;
+      this.state.unsubscribe(() => this.update());
+    }
 
-    static computedTypes = computedTypes ? computedTypes() : {};
+    attributeChangedCallback(key, oldValue, newValue) {
+      this.attrs[key] = newValue && newValue.startsWith(`{`) ? JSON.parse(newValue.replace(/'/g, `"`)) : newValue;
+      if (this._connected) {
+        this.update();
+      }
+    }
+
+    update() {
+      if (this._dirty) {
+        return;
+      }
+      this._dirty = true;
+      this.enqueueUpdate();
+    }
+
+    _performUpdate() {
+      if (!this._connected) {
+        return;
+      }
+      this.render();
+      this._dirty = false;
+    }
+
+    batch(runner, pick, callback) {
+      const q = [];
+      const flush = () => {
+        let p;
+        while ((p = pick(q))) callback(p);
+      };
+      const run = runner(flush);
+      q.push(this) === 1 && run();
+    }
+
+    enqueueUpdate() {
+      this.batch(microtask, fifo, () => this._performUpdate());
+    }
 
     render() {
-      return render({
+      const template = renderFn({
         attrs: this.attrs,
-        state: this.state,
-        computed: this.computed,
+        state: this.state.getValue(),
+        actions: this.state.actions,
       });
-    }
-  };
-  Element.register();
-  return { name, attrTypes, stateTypes, computedTypes, render };
-};
-
-const lastAttributeNameRegex =
-  /([ \x09\x0a\x0c\x0d])([^\0-\x1F\x7F-\x9F "'>=/]+)([ \x09\x0a\x0c\x0d]*=[ \x09\x0a\x0c\x0d]*(?:[^ \x09\x0a\x0c\x0d"'`<>=]*|"[^"]*|'[^']*))$/;
-const tagRE = /<[a-zA-Z0-9\-\!\/](?:"[^"]*"|'[^']*'|[^'">])*>/g;
-const whitespaceRE = /^\s*$/;
-const attrRE = /\s([^'"/\s><]+?)[\s/>]|([^\s=]+)=\s?(".*?"|'.*?')/g;
-const voidElements = ['area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta', 'param', 'source', 'track', 'wbr'];
-
-const parseTag = (tag) => {
-  const res = {
-    type: 'tag',
-    name: '',
-    voidElement: false,
-    attrs: {},
-    children: [],
-  };
-
-  const tagMatch = tag.match(/<\/?([^\s]+?)[/\s>]/);
-  if (tagMatch) {
-    res.name = tagMatch[1];
-    if (voidElements.includes(tagMatch[1]) || tag.charAt(tag.length - 2) === '/') {
-      res.voidElement = true;
-    }
-
-    // handle comment tag
-    if (res.name.startsWith('!--')) {
-      const endIndex = tag.indexOf('-->');
-      return {
-        type: 'comment',
-        comment: endIndex !== -1 ? tag.slice(4, endIndex) : '',
-      };
-    }
-  }
-
-  const reg = new RegExp(attrRE);
-  let result = null;
-  for (;;) {
-    result = reg.exec(tag);
-
-    if (result === null) {
-      break;
-    }
-
-    if (!result[0].trim()) {
-      continue;
-    }
-
-    if (result[1]) {
-      const attr = result[1].trim();
-      let arr = [attr, ''];
-
-      if (attr.indexOf('=') > -1) {
-        arr = attr.split('=');
-      }
-
-      res.attrs[arr[0]] = arr[1];
-      reg.lastIndex--;
-    } else if (result[2]) {
-      res.attrs[result[2]] = result[3].trim().substring(1, result[3].length - 1);
-    }
-  }
-
-  return res;
-};
-const parseHtml = (html) => {
-  const result = [];
-  const arr = [];
-  let current;
-  let level = -1;
-
-  // handle text at top level
-  if (html.indexOf('<') !== 0) {
-    var end = html.indexOf('<');
-    result.push({
-      type: 'text',
-      content: end === -1 ? html : html.substring(0, end),
-    });
-  }
-
-  html.replace(tagRE, function (tag, index) {
-    const isOpen = tag.charAt(1) !== '/';
-    const isComment = tag.startsWith('<!--');
-    const start = index + tag.length;
-    const nextChar = html.charAt(start);
-    let parent;
-
-    if (isComment) {
-      const comment = parseTag(tag);
-
-      // if we're at root, push new base node
-      if (level < 0) {
-        result.push(comment);
-        return result;
-      }
-      parent = arr[level];
-      parent.children.push(comment);
-      return result;
-    }
-
-    if (isOpen) {
-      level++;
-
-      current = parseTag(tag);
-
-      if (!current.voidElement && nextChar && nextChar !== '<') {
-        current.children.push({
-          type: 'text',
-          content: html.slice(start, html.indexOf('<', start)),
+      if (isBrowser) {
+        // TODO: this can be optimized when we know whether the value belongs in a class (AttributePart)
+        // maybe do this in lit-html itselfs
+        const newClassList = getClassList(template).filter((cls) => {
+          const globalStyles = document.getElementById('global').textContent;
+          return !globalStyles.includes('.' + cls);
         });
-      }
-
-      // if we're at root, push new base node
-      if (level === 0) {
-        result.push(current);
-      }
-
-      parent = arr[level - 1];
-
-      if (parent) {
-        parent.children.push(current);
-      }
-
-      arr[level] = current;
-    }
-
-    if (!isOpen || current.voidElement) {
-      if (level > -1 && (current.voidElement || current.name === tag.slice(2, -1))) {
-        level--;
-        // move current up a level to match the end tag
-        current = level === -1 ? result : arr[level];
-      }
-      if (nextChar !== '<' && nextChar) {
-        // trailing text node
-        // if we're at the root, push a base text node. otherwise add as
-        // a child to the current node.
-        parent = level === -1 ? result : arr[level].children;
-
-        // calculate correct end of the content slice in case there's
-        // no tag after the text node.
-        const end = html.indexOf('<', start);
-        let content = html.slice(start, end === -1 ? undefined : end);
-        // if a node is nothing but whitespace, collapse it as the spec states:
-        // https://www.w3.org/TR/html4/struct/text.html#h-9.1
-        if (whitespaceRE.test(content)) {
-          content = ' ';
+        if (newClassList.length > 0) {
+          document.getElementById('global').textContent += generateTWStyleSheet(newClassList);
         }
-        // don't add whitespace-only text nodes if they would be trailing text nodes
-        // or if they would be leading whitespace-only text nodes:
-        //  * end > -1 indicates this is not a trailing text node
-        //  * leading node is when level is -1 and parent has length 0
-        if ((end > -1 && level + parent.length >= 0) || content !== ' ') {
-          parent.push({
-            type: 'text',
-            content: content,
-          });
-        }
-      }
-    }
-  });
-
-  return result;
-};
-
-const stringifyAttrs = (attrs) => {
-  const buff = [];
-  for (let key in attrs) {
-    buff.push(key + '="' + attrs[key] + '"');
-  }
-  if (!buff.length) {
-    return '';
-  }
-  return ' ' + buff.join(' ');
-};
-
-const stringifyHtml = (buff, doc) => {
-  switch (doc.type) {
-    case 'text':
-      return buff + doc.content;
-    case 'tag':
-      buff += '<' + doc.name + (doc.attrs ? stringifyAttrs(doc.attrs) : '') + (doc.voidElement ? '/>' : '>');
-      if (doc.voidElement) {
-        return buff;
-      }
-      return buff + doc.children.reduce(stringifyHtml, '') + '</' + doc.name + '>';
-    case 'comment':
-      buff += '<!--' + doc.comment + '-->';
-      return buff;
-  }
-};
-
-const hydrate = (node) => {
-  const Clazz = AtomsElement.getElement(node.name);
-  if (Clazz) {
-    const newAttrs = {};
-    Object.keys(node.attrs).forEach((key) => {
-      const attrType = Clazz.attrTypes[key];
-      if (attrType) {
-        newAttrs[key] = attrType.parse(node.attrs[key]);
+        renderHtml(template, this);
+        // For shadows only
+        // if (!this.styleElement) {
+        //   render(template, this.shadow);
+        //   const styleSheet = generateTWStyleSheet(classList);
+        //   this.prevClassList = classList;
+        //   this.styleElement = document.createElement('style');
+        //   this.shadow.appendChild(this.styleElement).textContent = css(pageStyles) + styleSheet;
+        // } else {
+        //   const missingClassList = classList.filter((cls) => !this.prevClassList.includes(cls));
+        //   if (missingClassList.length > 0) {
+        //     const styleSheet = generateTWStyleSheet(missingClassList);
+        //     this.styleElement.textContent += '\n' + styleSheet;
+        //     this.prevClassList.push(...missingClassList);
+        //   }
+        //   render(template, this.shadow);
+        // }
       } else {
-        newAttrs[key] = node.attrs[key];
+        return renderHtml(template);
       }
-    });
-    const instance = new Clazz(newAttrs);
-    const res = instance.renderTemplate();
-    node.children = parseHtml(res);
-  }
-  if (node.children) {
-    for (const child of node.children) {
-      hydrate(child);
     }
-  }
+  };
+  registerElement(name, Element);
+  return { name, attrs, state, render: renderFn };
 };
-
-const wrapAttribute = (attrName, suffix, text, v) => {
-  let buffer = text;
-  const hasQuote = suffix && suffix.includes(`="`);
-  if (attrName && !hasQuote) {
-    buffer += `"`;
-  }
-  buffer += v;
-  if (attrName && !hasQuote) {
-    buffer += `"`;
-  }
-  return buffer;
-};
-
-export const render = isBrowser
-  ? litRender
-  : (template) => {
-      let js = '';
-      template.strings.forEach((text, i) => {
-        const value = template.values[i];
-        const type = typeof value;
-        let attrName, suffix;
-        const matchName = lastAttributeNameRegex.exec(text);
-        if (matchName) {
-          attrName = matchName[2];
-          suffix = matchName[3];
-        }
-        if (value === null || !(type === 'object' || type === 'function' || type === 'undefined')) {
-          js += wrapAttribute(attrName, suffix, text, type !== 'string' ? String(value) : value);
-        } else if (Array.isArray(value) && value.find((item) => item && item.strings && item.type === 'html')) {
-          js += text;
-          value.forEach((v) => {
-            js += render(v);
-          });
-        } else if (type === 'object') {
-          // TemplateResult
-          if (value.strings && value.type === 'html') {
-            js += text;
-            js += render(value);
-          } else {
-            js += wrapAttribute(attrName, suffix, text, JSON.stringify(value).replace(/"/g, `'`));
-          }
-        } else if (type == 'function') {
-          if (attrName) {
-            js += text.replace(' ' + attrName + '=', '');
-          } else {
-            // js += text;
-            // js += value();
-          }
-        } else if (type !== 'undefined') {
-          js += text;
-          js += value.toString();
-        } else {
-          js += text;
-          // console.log('value', value);
-        }
-      });
-      const nodes = parseHtml(js);
-      for (const node of nodes) {
-        hydrate(node);
-      }
-      const html = nodes.reduce((acc, node) => {
-        return acc + stringifyHtml('', node);
-      }, '');
-      return html;
-    };
 
 export const createPage = ({ head, body }) => {
   return ({ headScript, bodyScript, lang, props }) => {
-    const isProd = process.env.NODE_ENV === 'production';
-    const headHtml = render(head(props));
-    const bodyHtml = render(body(props));
+    const headHtml = renderHtml(head(props));
+    const bodyHtml = renderHtml(body(props));
     const classes = extractClasses(bodyHtml);
     return `
       <!DOCTYPE html>
@@ -1238,7 +1097,6 @@ export const createPage = ({ head, body }) => {
         <body>
           ${bodyHtml}
           <script>
-            window.__DEV__ = ${!isProd};
             window.props = ${JSON.stringify(props)};
           </script>
           ${bodyScript}

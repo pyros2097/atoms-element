@@ -1,5 +1,5 @@
 import { expect, test, jest } from '@jest/globals';
-import { AtomsElement, createElement, createPage, html, render, number, boolean, string, array, object, unsafeHTML, css } from './index.js';
+import { AtomsElement, createElement, createPage, createState, html, render, number, boolean, string, array, object, unsafeHTML, css } from './index.js';
 
 global.__DEV = true;
 
@@ -49,6 +49,40 @@ primitives.forEach((value) =>
     spy.mockRestore();
   }),
 );
+
+test.only('createState', () => {
+  // computed: {
+  //     sum: (state, v) => state.count + v,
+  //   },
+  const countState = createState({
+    state: {
+      count: 0,
+    },
+    reducer: {
+      increment: (state, a) => ({ ...state, count: state.count + a }),
+      decrement: (state, a) => ({ ...state, count: state.count - a }),
+    },
+  });
+  createElement({
+    name: 'hello',
+    attrs: {
+      name: '123',
+    },
+    state: countState,
+    render: ({ attrs, state, actions }) => {
+      console.log('attrs', attrs);
+    },
+  });
+  // countState.subscribe((v) => {
+  //   console.log(v);
+  // });
+  // countState.increment(4);
+  // console.log(countState.sum(21));
+  // countState.decrement(1);
+  // console.log(countState.sum(21));
+  // countState.decrement(2);
+  // console.log(countState.sum(21));
+});
 
 test('object', () => {
   const spy = jest.spyOn(global.console, 'warn').mockImplementation();
