@@ -51,23 +51,19 @@ export type PageRenderProps = {
 }
 export type Handler = (props: any) => string;
 
-export const createPage = (props: { head: Handler, body: Handler}) => (props: PageRenderProps) => string;
+export function createPage(props: { head: Handler, body: Handler}): (props: PageRenderProps) => string;
 
 export type State<P, Q> = {
-  getState: () => P;
+  getValue: () => P;
   subscribe: (fn: (v: P) => void) => void;
-} & { [K in keyof Q]: (v: any) => void}
+} & { actions: { [K in keyof Q]: (v: any) => void}}
 
 export function createState<P, Q extends {[k: string]: (state: P, v: any) => P}>(props: { state: P, reducer: Q }): State<P, Q>;
-
-
-export type ElementState<P, Q> = P & { [K in keyof Q]: (v: any) => void}
-
 
 export type CreateElementProps<N, P, Q> = {
   name: string;
   attrs: N;
-  state: State<P, Q>;
+  state: P;
   reducer: Q
   render:  (props: { attrs: N, state: P, actions: { [K in keyof Q]: (v: any) => void;} }) => any
 }
