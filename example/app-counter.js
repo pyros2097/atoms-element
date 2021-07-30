@@ -1,11 +1,11 @@
-import { createElement, createState, html } from '../index.js';
+import { createElement, html } from '../index.js';
 
 export default createElement({
   name: 'app-counter',
   attrs: {
-    name: '',
+    name: String,
     meta: {
-      start: '',
+      start: String,
     },
   },
   state: {

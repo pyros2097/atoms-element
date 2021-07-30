@@ -345,7 +345,7 @@ const getClassList = (template) => {
   return classes;
 };
 
-export const generateTWStyleSheet = (classList) => {
+export const compileTw = (classList) => {
   let styleSheet = ``;
   classList.forEach((cls) => {
     const item = classLookup[cls];
@@ -928,6 +928,16 @@ const microtask = (flush) => () => queueMicrotask(flush);
 export const createState = ({ state, reducer }) => {
   let initial = state;
   const subs = new Set();
+  const actions = Object.keys(reducer).reduce((acc, key) => {
+    const reduce = reducer[key];
+    acc[key] = (v) => {
+      initial = reduce(initial, v);
+      subs.forEach((sub) => {
+        sub(initial);
+      });
+    };
+    return acc;
+  }, {});
   return {
     getValue: () => initial,
     subscribe: (fn) => {
@@ -936,16 +946,8 @@ export const createState = ({ state, reducer }) => {
     unsubscribe: (fn) => {
       subs.remove(fn);
     },
-    actions: Object.keys(reducer).reduce((acc, key) => {
-      const reduce = reducer[key];
-      acc[key] = (v) => {
-        initial = reduce(initial, v);
-        subs.forEach((sub) => {
-          sub(initial);
-        });
-      };
-      return acc;
-    }, {}),
+    actions,
+    ...actions,
   };
 };
 
@@ -975,7 +977,7 @@ export const createElement = ({ name, attrs, state, reducer, render: renderFn })
       this._dirty = false;
       this._connected = false;
       this.attrs = ssrAttrs || attrs;
-      this.state = createState({ state, reducer });
+      this.state = state ? createState({ state, reducer }) : null;
       this.config = isBrowser ? window.config : global.config;
       this.location = isBrowser ? window.location : global.location;
       // this.prevClassList = [];
@@ -1033,8 +1035,8 @@ export const createElement = ({ name, attrs, state, reducer, render: renderFn })
     render() {
       const template = renderFn({
         attrs: this.attrs,
-        state: this.state.getValue(),
-        actions: this.state.actions,
+        state: this.state ? this.state.getValue() : {},
+        actions: this.state ? this.state.actions : {},
       });
       if (isBrowser) {
         // TODO: this can be optimized when we know whether the value belongs in a class (AttributePart)
@@ -1044,20 +1046,20 @@ export const createElement = ({ name, attrs, state, reducer, render: renderFn })
           return !globalStyles.includes('.' + cls);
         });
         if (newClassList.length > 0) {
-          document.getElementById('global').textContent += generateTWStyleSheet(newClassList);
+          document.getElementById('global').textContent += compileTw(newClassList);
         }
         renderHtml(template, this);
         // For shadows only
         // if (!this.styleElement) {
         //   render(template, this.shadow);
-        //   const styleSheet = generateTWStyleSheet(classList);
+        //   const styleSheet = compileTw(classList);
         //   this.prevClassList = classList;
         //   this.styleElement = document.createElement('style');
         //   this.shadow.appendChild(this.styleElement).textContent = css(pageStyles) + styleSheet;
         // } else {
         //   const missingClassList = classList.filter((cls) => !this.prevClassList.includes(cls));
         //   if (missingClassList.length > 0) {
-        //     const styleSheet = generateTWStyleSheet(missingClassList);
+        //     const styleSheet = compileTw(missingClassList);
         //     this.styleElement.textContent += '\n' + styleSheet;
         //     this.prevClassList.push(...missingClassList);
         //   }
@@ -1090,7 +1092,7 @@ export const createPage = ({ head, body }) => {
           ${headHtml}
           <style id="global">
             ${css(pageStyles)}
-            ${generateTWStyleSheet(new Set(classes.split(' ')))}
+            ${compileTw(new Set(classes.split(' ')))}
           </style>
           ${headScript}
         </head>
