@@ -36,9 +36,12 @@ export type Reducer<P, Q> = {
   subscribe: (fn: (v: P) => void) => void;
 } & { actions: { [K in keyof Q]: (v: any) => void}}
 
-export function createReducer<P, Q extends {[k: string]: (state: P, v: any) => P}>(props: { initial: P, reducer: Q }): Reducer<P, Q>;
+export type Thunk = () => void | Promise<void>;
+export type ReducerActions<P> = {[k: string]: (state: P, v: any) => P | Thunk };
 
-export function useReducer<P, Q extends {[k: string]: (state: P, v: any) => P}>(props: Reducer<P, Q> | { initial: P, reducer: Q }) : P & Reducer<P, Q>;
+export function createReducer<P, Q extends ReducerActions<P>>(props: { initial: P, reducer: Q }): Reducer<P, Q>;
+
+export function useReducer<P, Q extends ReducerActions<P>>(props: Reducer<P, Q> | { initial: P, reducer: Q }) : P & Reducer<P, Q>;
 
 export function createElement(meta: any, renderFn: any): any
 export type Handler = (props: any) => string;
