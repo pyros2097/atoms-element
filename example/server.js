@@ -2,17 +2,20 @@ import http from 'http';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
-import renderPage from './page.js';
+import renderPage from './pages/index.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
-
 const port = process.argv[2] || 3000;
+const elements = ['app-counter.js', 'app-total.js'];
 const srcMap = {
   '/index.js': `${__dirname}/../index.js`,
   '/lit-html.js': `${__dirname}/../lit-html.js`,
-  '/app-counter.js': `${__dirname}/app-counter.js`,
+  '/store.js': `${__dirname}/store.js`,
 };
+elements.forEach((el) => {
+  srcMap['/elements/' + el] = `${__dirname}/elements/${el}`;
+});
 
 http
   .createServer((req, res) => {
@@ -27,7 +30,7 @@ http
         headScript: '',
         bodyScript: `
           <script type="module">
-           import './app-counter.js';
+          ${elements.map((el) => `import './elements/${el}';`).join('\n')}
           </script>
         `,
       });
