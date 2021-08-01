@@ -1,4 +1,4 @@
-export declare type Config = {
+export type Config = {
   version: string
   url: string
   image: string
@@ -13,7 +13,7 @@ export declare type Config = {
   themes: {[key: string]: any}
 }
 
-export declare type Location = {
+export type Location = {
   readonly ancestorOrigins: DOMStringList;
   hash: string;
   host: string;
@@ -30,42 +30,16 @@ export declare type Location = {
   toString: () => string;
 }
 
-export declare type Data = any;
-export declare type Item = any;
 
-export class AtomsElement {
-  static register(): () => void;
-  static observedAttributes: Array<string>;
-  static getElement: (name: string) => AtomsElement | undefined;
-  attrs: {[key: string]: any};
-  state: {[key: string]: any};
-  computed: {[key: string]: any};
-}
-export const getConfig = () => Config;
-export const getLocation = () => Location;
-
-export type PageRenderProps = {
-  props: any;
-  headScript: string; 
-  bodyScript: string;
-}
-export type Handler = (props: any) => string;
-
-export function createPage(props: { head: Handler, body: Handler}): (props: PageRenderProps) => string;
-
-export type State<P, Q> = {
+export type Reducer<P, Q> = {
   getValue: () => P;
   subscribe: (fn: (v: P) => void) => void;
 } & { actions: { [K in keyof Q]: (v: any) => void}}
 
-export function createState<P, Q extends {[k: string]: (state: P, v: any) => P}>(props: { state: P, reducer: Q }): State<P, Q>;
+export function createReducer<P, Q extends {[k: string]: (state: P, v: any) => P}>(props: { initial: P, reducer: Q }): Reducer<P, Q>;
 
-export type CreateElementProps<N, P, Q> = {
-  name: string;
-  attrs: N;
-  state: P;
-  reducer: Q
-  render:  (props: { attrs: N, state: P, actions: { [K in keyof Q]: (v: any) => void;} }) => any
-}
+export function useReducer<P, Q extends {[k: string]: (state: P, v: any) => P}>(props: Reducer<P, Q> | { initial: P, reducer: Q }) : P & Reducer<P, Q>;
 
-export function createElement<N, P, Q extends {[k: string]: (state: P, v: any) => P}>(props: CreateElementProps<N, P, Q>): CreateElementProps<N, P, Q>;
+export function createElement(meta: any, renderFn: any): any
+export type Handler = (props: any) => string;
+export function createPage(props: { head: Handler, body: Handler}): (props: { props: any, headScript: string, bodyScript: string }) => string;

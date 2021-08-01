@@ -9,6 +9,14 @@ const tagRE = /<[a-zA-Z0-9\-\!\/](?:"[^"]*"|'[^']*'|[^'">])*>/g;
 const whitespaceRE = /^\s*$/;
 const attrRE = /\s([^'"/\s><]+?)[\s/>]|([^\s=]+)=\s?(".*?"|'.*?')/g;
 const voidElements = ['area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta', 'param', 'source', 'track', 'wbr'];
+const STRIP_COMMENTS = /((\/\/.*$)|(\/\*[\s\S]*?\*\/))/gm;
+const ARGUMENT_NAMES = /([^\s,]+)/g;
+
+const parseFuncParams = (func) => {
+  const fnStr = func.toString().replace(STRIP_COMMENTS, '');
+  const result = fnStr.slice(fnStr.indexOf('(') + 1, fnStr.indexOf(')')).match(ARGUMENT_NAMES);
+  return (result || []).filter((it) => it !== '{' && it !== '}');
+};
 
 const parseTag = (tag) => {
   const res = {
@@ -925,21 +933,25 @@ export const unsafeHTML = isBrowser
 const fifo = (q) => q.shift();
 const microtask = (flush) => () => queueMicrotask(flush);
 
-export const createState = ({ state, reducer }) => {
-  let initial = state;
+export const createAttrs = (attrs) => attrs;
+
+export const createReducer = ({ initial, reducer }) => {
+  let value = initial;
   const subs = new Set();
   const actions = Object.keys(reducer).reduce((acc, key) => {
     const reduce = reducer[key];
     acc[key] = (v) => {
-      initial = reduce(initial, v);
+      value = reduce(value, v);
       subs.forEach((sub) => {
-        sub(initial);
+        sub(value);
       });
     };
     return acc;
   }, {});
   return {
-    getValue: () => initial,
+    initial,
+    reducer,
+    getValue: () => value,
     subscribe: (fn) => {
       subs.add(fn);
     },
@@ -947,52 +959,64 @@ export const createState = ({ state, reducer }) => {
       subs.remove(fn);
     },
     actions,
-    ...actions,
   };
 };
 
-const registry = {};
-export const getConfig = () => (isBrowser ? window.props.config : global.props.config);
-export const getLocation = () => (isBrowser ? window.location : global.location);
-export const getElement = (name) => registry[name];
-export const registerElement = (name, clazz) => {
-  registry[name] = clazz;
-  if (isBrowser) {
-    if (window.customElements.get(name)) {
-      return;
-    } else {
-      window.customElements.define(name, registry[name]);
-    }
-  }
+const currentComponent = {
+  current: undefined,
+  set(v) {
+    this.current = v;
+    this.current.hooks.index = 0;
+  },
+  get() {
+    return this.current;
+  },
 };
+
+export const useReducer = (reducer) => {
+  const comp = currentComponent.get();
+  const index = comp.hooks.index++;
+  if (!comp.hooks.data[index]) {
+    comp.hooks.data[index] = reducer.subscribe ? reducer : createReducer(reducer);
+    comp.hooks.data[index].subscribe(() => comp.update());
+  }
+  const state = comp.hooks.data[index].getValue();
+  return { ...state, actions: comp.hooks.data[index].actions };
+};
+
+const registry = {};
+export const getElement = (name) => registry[name];
 const BaseElement = isBrowser ? window.HTMLElement : class {};
-export const createElement = ({ name, attrs, state, reducer, render: renderFn }) => {
-  const Element = class extends BaseElement {
+export const createElement = (meta, renderFn) => {
+  const funcParams = parseFuncParams(renderFn);
+  const RenderElement = class extends BaseElement {
     static get observedAttributes() {
-      return Object.keys(attrs || {}).map((k) => k.toLowerCase());
+      return funcParams.map((k) => k.toLowerCase());
     }
 
     constructor(ssrAttrs) {
       super();
       this._dirty = false;
       this._connected = false;
-      this.attrs = ssrAttrs || attrs;
-      this.state = state ? createState({ state, reducer }) : null;
-      this.config = isBrowser ? window.config : global.config;
-      this.location = isBrowser ? window.location : global.location;
+      this.attrs = ssrAttrs || {};
+      this.state = {};
+      this.hooks = {
+        index: 0,
+        data: {},
+      };
       // this.prevClassList = [];
       // this.shadow = this.attachShadow({ mode: 'open' });
     }
 
     connectedCallback() {
       this._connected = true;
-      this.state.subscribe(() => this.update());
+      // this.state.subscribe(() => this.update());
       this.update();
     }
 
     disconnectedCallback() {
       this._connected = false;
-      this.state.unsubscribe(() => this.update());
+      // this.state.unsubscribe(() => this.update());
     }
 
     attributeChangedCallback(key, oldValue, newValue) {
@@ -1033,10 +1057,11 @@ export const createElement = ({ name, attrs, state, reducer, render: renderFn })
     }
 
     render() {
+      currentComponent.set(this);
       const template = renderFn({
-        attrs: this.attrs,
-        state: this.state ? this.state.getValue() : {},
-        actions: this.state ? this.state.actions : {},
+        ...this.attrs,
+        config: isBrowser ? window.props.config : global?.props?.config,
+        location: isBrowser ? window.location : global?.location,
       });
       if (isBrowser) {
         // TODO: this can be optimized when we know whether the value belongs in a class (AttributePart)
@@ -1070,8 +1095,17 @@ export const createElement = ({ name, attrs, state, reducer, render: renderFn })
       }
     }
   };
-  registerElement(name, Element);
-  return { name, attrs, state, render: renderFn };
+  const parts = meta.url.split('/');
+  const name = parts[parts.length - 1].replace('.js', '');
+  registry[name] = RenderElement;
+  if (isBrowser) {
+    if (window.customElements.get(name)) {
+      return;
+    } else {
+      window.customElements.define(name, registry[name]);
+    }
+  }
+  return renderFn;
 };
 
 export const createPage = ({ head, body }) => {
