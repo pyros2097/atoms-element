@@ -9,7 +9,7 @@ const tagRE = /<[a-zA-Z0-9\-\!\/](?:"[^"]*"|'[^']*'|[^'">])*>/g;
 const whitespaceRE = /^\s*$/;
 const attrRE = /\s([^'"/\s><]+?)[\s/>]|([^\s=]+)=\s?(".*?"|'.*?')/g;
 const voidElements = ['area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta', 'param', 'source', 'track', 'wbr'];
-const STRIP_COMMENTS = /((\/\/.*$)|(\/\*[\s\S]*?\*\/))/gm;
+const STRIP_COMMENTS = /(\/\/.*$)|(\/\*[\s\S]*?\*\/)|(\s*=[^,\)]*(('(?:\\'|[^'\r\n])*')|("(?:\\"|[^"\r\n])*"))|(\s*=[^,\)]*))/gm;
 const ARGUMENT_NAMES = /([^\s,]+)/g;
 
 const parseFuncParams = (func) => {
@@ -941,7 +941,13 @@ export const createReducer = ({ initial, reducer }) => {
   const actions = Object.keys(reducer).reduce((acc, key) => {
     const reduce = reducer[key];
     acc[key] = (v) => {
-      value = reduce(value, v);
+      const res = reduce(value, v);
+      if (typeof res === 'object') {
+        value = res;
+      }
+      if (typeof res === 'function') {
+        res();
+      }
       subs.forEach((sub) => {
         sub(value);
       });
@@ -982,6 +988,16 @@ export const useReducer = (reducer) => {
   }
   const state = comp.hooks.data[index].getValue();
   return { ...state, actions: comp.hooks.data[index].actions };
+};
+export const useEffect = (fn, deps) => {
+  const comp = currentComponent.get();
+  const index = comp.hooks.index++;
+  if (!comp.hooks.data[index]) {
+    comp.hooks.data[index] = {
+      cb: fn,
+      deps,
+    };
+  }
 };
 
 const registry = {};

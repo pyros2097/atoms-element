@@ -5,10 +5,22 @@ const Counter = ({ name, meta }) => {
   const { count, actions } = useReducer({
     initial: {
       count: 0,
+      data: null,
+      err: null,
     },
     reducer: {
       increment: (state) => ({ ...state, count: state.count + 1 }),
       decrement: (state) => ({ ...state, count: state.count - 1 }),
+      setData: (state, data) => ({ ...state, data }),
+      setErr: (state, err) => ({ ...state, err }),
+      fetchData: (state, id) => async () => {
+        try {
+          const res = await fetch(`/api/posts/${id}`);
+          actions.setData(res.json());
+        } catch (err) {
+          actions.setErr(res.json());
+        }
+      },
     },
   });
   const increment = () => {
