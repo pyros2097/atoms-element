@@ -31,17 +31,17 @@ export type Location = {
 }
 
 
-export type Reducer<P, Q> = {
+export type Reducer<P, Q, R> = {
   getValue: () => P;
   subscribe: (fn: (v: P) => void) => void;
-} & { actions: { [K in keyof Q]: (v: any) => void}}
+} & { actions: { [K in keyof Q]: (v: any) => void}} & { effects: { [K in keyof R]: (v: any) => void}}
 
-export type Thunk = () => void | Promise<void>;
-export type ReducerActions<P> = {[k: string]: (state: P, v: any) => P | Thunk };
+export type ReducerActions<P> = {[k: string]: (state: P, v: any) => P};
+export type EffectActions<P, Q extends ReducerActions<P>> = {[k: string]: (actions: { [K in keyof Q]: (v: any) => void}, v: any) => void};
 
 export function createReducer<P, Q extends ReducerActions<P>>(props: { initial: P, reducer: Q }): Reducer<P, Q>;
 
-export function useReducer<P, Q extends ReducerActions<P>>(props: Reducer<P, Q> | { initial: P, reducer: Q }) : P & Reducer<P, Q>;
+export function useReducer<P, Q extends ReducerActions<P>, R extends EffectActions<P, Q>>(props: Reducer<P, Q, R> | { initial: P, reducer: Q, effects: R }) : P & Reducer<P, Q, R>;
 
 export function createElement(meta: any, renderFn: any): any
 export type Handler = (props: any) => string;

@@ -931,32 +931,40 @@ export const unsafeHTML = isBrowser
   : (value) => value;
 
 const fifo = (q) => q.shift();
+const filo = (q) => q.pop();
 const microtask = (flush) => () => queueMicrotask(flush);
+const task = (flush) => {
+  if (isBrowser) {
+    const ch = new window.MessageChannel();
+    ch.port1.onmessage = flush;
+    return () => ch.port2.postMessage(null);
+  } else {
+    return () => setImmediate(flush);
+  }
+};
+const depsChanged = (prev, next) => prev == null || next.some((f, i) => !Object.is(f, prev[i]));
 
 export const createAttrs = (attrs) => attrs;
 
-export const createReducer = ({ initial, reducer }) => {
+export const createReducer = ({ initial, reducer, effects }) => {
   let value = initial;
   const subs = new Set();
   const actions = Object.keys(reducer).reduce((acc, key) => {
     const reduce = reducer[key];
     acc[key] = (v) => {
-      const res = reduce(value, v);
-      if (typeof res === 'object') {
-        value = res;
-      }
-      if (typeof res === 'function') {
-        res();
-      }
+      value = reduce(value, v);
       subs.forEach((sub) => {
         sub(value);
       });
     };
     return acc;
   }, {});
+  const effectActions = Object.keys(effects || {}).reduce((acc, key) => {
+    const effect = effects[key];
+    acc[key] = (v) => effect(actions, v);
+    return acc;
+  }, {});
   return {
-    initial,
-    reducer,
     getValue: () => value,
     subscribe: (fn) => {
       subs.add(fn);
@@ -965,6 +973,7 @@ export const createReducer = ({ initial, reducer }) => {
       subs.remove(fn);
     },
     actions,
+    effects: effectActions,
   };
 };
 
@@ -987,16 +996,14 @@ export const useReducer = (reducer) => {
     comp.hooks.data[index].subscribe(() => comp.update());
   }
   const state = comp.hooks.data[index].getValue();
-  return { ...state, actions: comp.hooks.data[index].actions };
+  return { ...state, actions: comp.hooks.data[index].actions, effects: comp.hooks.data[index].effects };
 };
 export const useEffect = (fn, deps) => {
   const comp = currentComponent.get();
   const index = comp.hooks.index++;
-  if (!comp.hooks.data[index]) {
-    comp.hooks.data[index] = {
-      cb: fn,
-      deps,
-    };
+  if (!deps || depsChanged(comp.hooks.deps[index], deps)) {
+    comp.hooks.deps[index] = deps || [];
+    comp.hooks.effects[index] = fn;
   }
 };
 
@@ -1019,6 +1026,9 @@ export const createElement = (meta, renderFn) => {
       this.hooks = {
         index: 0,
         data: {},
+        deps: {},
+        effects: {},
+        cleanups: {},
       };
       // this.prevClassList = [];
       // this.shadow = this.attachShadow({ mode: 'open' });
@@ -1026,13 +1036,11 @@ export const createElement = (meta, renderFn) => {
 
     connectedCallback() {
       this._connected = true;
-      // this.state.subscribe(() => this.update());
       this.update();
     }
 
     disconnectedCallback() {
       this._connected = false;
-      // this.state.unsubscribe(() => this.update());
     }
 
     attributeChangedCallback(key, oldValue, newValue) {
@@ -1055,7 +1063,24 @@ export const createElement = (meta, renderFn) => {
         return;
       }
       this.render();
+      this.enqueueEffects();
       this._dirty = false;
+    }
+
+    _flushEffects() {
+      const effects = this.hooks.effects;
+      const cleanups = this.hooks.cleanups;
+      const keys = Object.keys(effects);
+      for (const key of keys) {
+        if (effects[key]) {
+          cleanups[key] && cleanups[key]();
+          const cleanup = effects[key]();
+          if (cleanup) {
+            cleanups[key] = cleanup;
+          }
+          delete effects[key];
+        }
+      }
     }
 
     batch(runner, pick, callback) {
@@ -1070,6 +1095,10 @@ export const createElement = (meta, renderFn) => {
 
     enqueueUpdate() {
       this.batch(microtask, fifo, () => this._performUpdate());
+    }
+
+    enqueueEffects() {
+      this.batch(task, filo, () => this._flushEffects());
     }
 
     render() {

@@ -19,6 +19,19 @@ elements.forEach((el) => {
 
 http
   .createServer((req, res) => {
+    if (req.url.includes('/api/posts')) {
+      const parts = req.url.split('/');
+      const id = parts[parts.length - 1];
+      res.setHeader('Content-type', 'application/json');
+      res.end(
+        JSON.stringify({
+          id,
+          title: `post ${id}`,
+          description: ` description ${id}`,
+        }),
+      );
+      return;
+    }
     if (req.url === '/') {
       res.statusCode = 200;
       res.setHeader('Content-type', 'text/html');
