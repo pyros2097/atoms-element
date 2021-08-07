@@ -1,28 +1,38 @@
+import { useEffect } from '../../index.js';
 import { createElement, html, useReducer } from '../../index.js';
 import { totalReducer } from '../store.js';
 
 const Counter = ({ name, meta }) => {
-  const { count, actions } = useReducer({
+  const { count, actions, effects } = useReducer({
     initial: {
       count: 0,
-      data: null,
+      data: undefined,
       err: null,
     },
     reducer: {
       increment: (state) => ({ ...state, count: state.count + 1 }),
       decrement: (state) => ({ ...state, count: state.count - 1 }),
+      setLoading: (state, v) => ({ ...state, loading: v }),
       setData: (state, data) => ({ ...state, data }),
       setErr: (state, err) => ({ ...state, err }),
-      fetchData: (state, id) => async () => {
+    },
+    effects: {
+      loadData: async (actions, id) => {
         try {
+          actions.setLoading(true);
           const res = await fetch(`/api/posts/${id}`);
-          actions.setData(res.json());
+          actions.setData(await res.json());
         } catch (err) {
-          actions.setErr(res.json());
+          actions.setErr(err);
+        } finally {
+          actions.setLoading(false);
         }
       },
     },
   });
+  useEffect(() => {
+    effects.loadData(name);
+  }, []);
   const increment = () => {
     actions.increment();
     totalReducer.actions.increment(count + 1);
