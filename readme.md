@@ -3,7 +3,8 @@
 [![Version](https://img.shields.io/npm/v/atoms-element?style=flat-square&color=blue)](https://www.npmjs.com/package/atoms-element)
 ![Test](https://github.com/pyros2097/atoms-element/actions/workflows/main.yml/badge.svg)
 
-A simple web component library for defining your custom elements. It works on both client and server. It follows the same principles of react. Data props are attributes on the custom element by default so its easier to debug and functions/handlers are attached to the element.
+A simple web component library for defining your custom elements. It works on both client and server. It supports hooks and follows the same principles of react.
+Data props are attributes on the custom element by default so its easier to debug and functions/handlers are attached to the element.
 
 I initially started researching if it was possible to server render web components but found out not one framework supported it. I liked using
 [haunted](https://github.com/matthewp/haunted) as it was react-like with hooks but was lost on how to implement server rendering. Libraries like
@@ -33,102 +34,37 @@ npm i atoms-element
 ## Example
 
 ```js
-import { createElement, html, css, object, number, string } from 'atoms-element/element.js';
-import { ssr } from 'atoms-element/page.js';
+import { createElement, useReducer, html, renderHtml } from 'atoms-element/index.js';
 
-const name = () => 'app-counter';
-
-const attrTypes = () => ({
-  name: string().required(),
-  meta: object({
-    start: number(),
-  }),
-});
-
-const stateTypes = () => ({
-  count: number()
-    .required()
-    .default((attrs) => attrs.meta?.start || 0),
-});
-
-const computedTypes = () => ({
-  sum: number()
-    .required()
-    .compute('count', (count) => {
-      return count + 10;
-    }),
-});
-
-const styles = css({
-  title: {
-    fontSize: '20px',
-    marginBottom: '0.5rem',
-    textAlign: 'center',
-  },
-  span: {
-    fontSize: '16px',
-  },
-  container: {
-    display: 'flex',
-    flex: 1,
-    flexDirection: 'row',
-    fontSize: '32px',
-    color: 'rgba(55, 65, 81, 1)',
-  },
-  mx: {
-    marginLeft: '5rem',
-    marginRight: '5rem',
-    fontSize: '30px',
-    fontFamily: `ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace`,
-  },
-  button: {
-    paddingTop: '0.5rem',
-    paddingBottom: '0.5rem',
-    paddingLeft: '1rem',
-    paddingRight: '1rem',
-    color: 'rgba(55, 65, 81, 1)',
-    borderRadius: '0.25rem',
-    backgroundColor: 'rgba(209, 213, 219, 1)',
-  },
-});
-
-const render = ({ attrs, state, computed }) => {
-  const { name, meta } = attrs;
-  const { count, setCount } = state;
-  const { sum } = computed;
-
+const Counter = ({ name, meta }) => {
+  const { count, actions } = useReducer({
+    initial: {
+      count: 0,
+    },
+    reducer: {
+      increment: (state) => ({ ...state, count: state.count + 1 }),
+      decrement: (state) => ({ ...state, count: state.count - 1 }),
+    },
+  });
+  const warningClass = count > 10 ? 'text-red-500' : '';
   return html`
-    <div>
-      <div class=${styles.title}>
+    <div class="mt-10">
+      <div class="mb-2">
         Counter: ${name}
-        <span class=${styles.span}>starts at ${meta?.start}</span>
+        <span>starts at ${meta?.start}</span>
       </div>
-      <div class=${styles.container}>
-        <button class=${styles.button} @click=${() => setCount((v) => v - 1)}>-</button>
-        <div class=${styles.mx}>
-          <h1>${count}</h1>
+      <div class="flex flex-1 flex-row items-center text-gray-700">
+        <button class="bg-gray-300 text-gray-700 rounded hover:bg-gray-200 px-4 py-2 text-3xl focus:outline-none" @click=${actions.decrement}>-</button>
+        <div class="mx-20">
+          <h1 class="text-3xl font-mono ${warningClass}">${count}</h1>
         </div>
-        <button class=${styles.button} @click=${() => setCount((v) => v + 1)}>+</button>
-      </div>
-      <div class=${styles.mx}>
-        <h1>Sum: ${sum}</h1>
+        <button class="bg-gray-300 text-gray-700 rounded hover:bg-gray-200 px-4 py-2 text-3xl focus:outline-none" @click=${actions.increment}>+</button>
       </div>
     </div>
   `;
 };
 
-export default createElement({
-  name,
-  attrTypes,
-  stateTypes,
-  computedTypes,
-  styles,
-  render,
-});
+createElement({ url: 'app-counter.js' }, Counter);
 
-console.log(ssr(html`<app-counter name="1"></app-counter>`));
+console.log(renderHtml(html`<app-counter name="1"></app-counter>`));
 ```
-
-This works in node, to make it work in the client side you need to either compile atoms-element using esintall or esbuild to an esm module and then
-rewrite the path from 'atoms-element' to 'web_modules/atoms-element/index.js' or if you can host the node_modules in a web server and change the path to
-the import 'atoms-element/element.js'
