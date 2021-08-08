@@ -36,14 +36,14 @@ exports[`compileTw 1`] = `
       "
 `;
 
-exports[`createElement with attrs and state 1`] = `
+exports[`createElement with attrs and hooks 1`] = `
 "
+      <div>
         <div>
-          <div>
-            <span>perPage: 5</span> </div> </div> <span>Count: 3</span>  <button>Set</button> "
+          <span>perPage: 5</span> </div> </div> <span>Count: 3</span>  <button>Set</button> "
 `;
 
-exports[`createElement without attrs and state 1`] = `" <div></div>"`;
+exports[`createElement without attrs 1`] = `" <div></div>"`;
 
 exports[`createPage 1`] = `
 "

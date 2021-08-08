@@ -1,5 +1,5 @@
 import { expect, test, jest } from '@jest/globals';
-import { getElement, createElement, createPage, createState, html, renderHtml, unsafeHTML, css, compileTw } from './index.js';
+import { getElement, createElement, createPage, createReducer, html, renderHtml, unsafeHTML, css, compileTw, useReducer } from './index.js';
 
 global.__DEV = true;
 
@@ -100,9 +100,9 @@ test('render multi template', async () => {
   expect(res).toMatchSnapshot();
 });
 
-test('createState', () => {
-  const countState = createState({
-    state: {
+test('createReducer', () => {
+  const countReducer = createReducer({
+    initial: {
       count: 0,
     },
     reducer: {
@@ -111,24 +111,21 @@ test('createState', () => {
     },
   });
   const mock = jest.fn();
-  countState.subscribe(mock);
-  countState.increment(4);
-  expect(countState.getValue().count).toEqual(4);
+  countReducer.subscribe(mock);
+  countReducer.actions.increment(4);
+  expect(countReducer.getValue().count).toEqual(4);
   expect(mock).toBeCalledWith({ count: 4 });
-  countState.decrement(1);
-  expect(countState.getValue().count).toEqual(3);
+  countReducer.actions.decrement(1);
+  expect(countReducer.getValue().count).toEqual(3);
   expect(mock).toBeCalledWith({ count: 3 });
-  countState.decrement(2);
-  expect(countState.getValue().count).toEqual(1);
+  countReducer.actions.decrement(2);
+  expect(countReducer.getValue().count).toEqual(1);
   expect(mock).toBeCalledWith({ count: 1 });
 });
 
-test('createElement without attrs and state', async () => {
-  createElement({
-    name: 'base-element',
-    render: () => {
-      return html` <div></div> `;
-    },
+test('createElement without attrs', async () => {
+  createElement({ url: '/base-element.js' }, () => {
+    return html` <div></div> `;
   });
   const Clazz = getElement('base-element');
   const instance = new Clazz();
@@ -136,34 +133,27 @@ test('createElement without attrs and state', async () => {
   expect(res).toMatchSnapshot();
 });
 
-test('createElement with attrs and state', async () => {
-  createElement({
-    name: 'base-element',
-    attrs: {
-      perPage: '',
-    },
-    state: {
-      count: 3,
-    },
-    reducer: {
-      setValue: (state, v) => ({ ...state, count: v }),
-    },
-    render: ({ attrs, state, actions }) => {
-      const { perPage } = attrs;
-      const { count } = state;
-
-      return html`
+test('createElement with attrs and hooks', async () => {
+  createElement({ url: '/base-element.js' }, ({ perPage }) => {
+    const { count, actions } = useReducer({
+      initial: {
+        count: 3,
+      },
+      reducer: {
+        setValue: (state, v) => ({ ...state, count: v }),
+      },
+    });
+    return html`
+      <div>
         <div>
-          <div>
-            <span>perPage: ${perPage}</span>
-          </div>
-          </div>
-              <span>Count: ${count}</span>
-          </div>
-          <button @click=${actions.setValue}>Set</button>
+          <span>perPage: ${perPage}</span>
         </div>
-      `;
-    },
+        </div>
+            <span>Count: ${count}</span>
+        </div>
+        <button @click=${actions.setValue}>Set</button>
+      </div>
+    `;
   });
   const Clazz = getElement('base-element');
   const instance = new Clazz({ perPage: 5 });
