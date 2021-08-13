@@ -747,9 +747,9 @@ const classLookup = {
   ...mapApply(radius),
   static: createStyle('position', 'static'),
   fixed: createStyle('position', 'fixed'),
-  absolute: createStyle('absolute', 'fixed'),
-  relative: createStyle('relative', 'fixed'),
-  sticky: createStyle('sticky', 'fixed'),
+  absolute: createStyle('position', 'absolute'),
+  relative: createStyle('position', 'relative'),
+  sticky: createStyle('position', 'sticky'),
   'overflow-auto': createStyle('overflow', 'auto'),
   'overflow-hidden': createStyle('overflow', 'hidden'),
   'overflow-visible': createStyle('overflow', 'visible'),
@@ -771,21 +771,21 @@ const classLookup = {
   'origin-bottom-left': createStyle('transformOrigin', 'bottom left'),
   'origin-left': createStyle('transformOrigin', 'left'),
   'origin-top-left': createStyle('transformOrigin', 'top left'),
-  'shadow-sm': createStyle('box-shadow', '0 0 #0000, 0 0 #0000, 0 1px 2px 0 rgba(0, 0, 0, 0.05'),
-  shadow: createStyle('box-shadow', '0 0 #0000, 0 0 #0000, 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06'),
-  'shadow-md': createStyle('box-shadow', '0 0 #0000, 0 0 #0000, 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06'),
-  'shadow-lg': createStyle('box-shadow', '0 0 #0000, 0 0 #0000, 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05'),
-  'shadow-xl': createStyle('box-shadow', '0 0 #0000, 0 0 #0000, 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04'),
-  'shadow-2xl': createStyle('box-shadow', '0 0 #0000, 0 0 #0000, 0 25px 50px -12px rgba(0, 0, 0, 0.25'),
-  'shadow-inner': createStyle('box-shadow', '0 0 #0000, 0 0 #0000, inset 0 2px 4px 0 rgba(0, 0, 0, 0.06'),
+  'shadow-sm': createStyle('box-shadow', '0 0 #0000, 0 0 #0000, 0 1px 2px 0 rgba(0, 0, 0, 0.05)'),
+  shadow: createStyle('box-shadow', '0 0 #0000, 0 0 #0000, 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)'),
+  'shadow-md': createStyle('box-shadow', '0 0 #0000, 0 0 #0000, 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'),
+  'shadow-lg': createStyle('box-shadow', '0 0 #0000, 0 0 #0000, 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)'),
+  'shadow-xl': createStyle('box-shadow', '0 0 #0000, 0 0 #0000, 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)'),
+  'shadow-2xl': createStyle('box-shadow', '0 0 #0000, 0 0 #0000, 0 25px 50px -12px rgba(0, 0, 0, 0.25)'),
+  'shadow-inner': createStyle('box-shadow', '0 0 #0000, 0 0 #0000, inset 0 2px 4px 0 rgba(0, 0, 0, 0.06)'),
   'shadow-none': createStyle('box-shadow', '0 0 #0000, 0 0 #0000, 0 0 #0000'),
   'ring-inset': createStyle('--tw-ring-inset', 'insest'),
-  'ring-0': createStyle('box-shadow', ' 0 0 0 calc(0px + 0px) rgba(59, 130, 246, 0.5'),
-  'ring-1': createStyle('box-shadow', ' 0 0 0 calc(1px + 0px) rgba(59, 130, 246, 0.5'),
-  'ring-2': createStyle('box-shadow', ' 0 0 0 calc(2px + 0px) rgba(59, 130, 246, 0.5'),
-  'ring-4': createStyle('box-shadow', ' 0 0 0 calc(4px + 0px) rgba(59, 130, 246, 0.5'),
-  'ring-8': createStyle('box-shadow', ' 0 0 0 calc(8px + 0px) rgba(59, 130, 246, 0.5'),
-  ring: createStyle('box-shadow', ' 0 0 0 calc(3px + 0px) rgba(59, 130, 246, 0.5'),
+  'ring-0': createStyle('box-shadow', ' 0 0 0 calc(0px + 0px) rgba(59, 130, 246, 0.5)'),
+  'ring-1': createStyle('box-shadow', ' 0 0 0 calc(1px + 0px) rgba(59, 130, 246, 0.5)'),
+  'ring-2': createStyle('box-shadow', ' 0 0 0 calc(2px + 0px) rgba(59, 130, 246, 0.5)'),
+  'ring-4': createStyle('box-shadow', ' 0 0 0 calc(4px + 0px) rgba(59, 130, 246, 0.5)'),
+  'ring-8': createStyle('box-shadow', ' 0 0 0 calc(8px + 0px) rgba(59, 130, 246, 0.5)'),
+  ring: createStyle('box-shadow', ' 0 0 0 calc(3px + 0px) rgba(59, 130, 246, 0.5)'),
 };
 
 const pageStyles = {
@@ -1030,6 +1030,7 @@ export const createElement = (meta, renderFn) => {
         effects: {},
         cleanups: {},
       };
+      this.renderFn = renderFn;
       // this.prevClassList = [];
       // this.shadow = this.attachShadow({ mode: 'open' });
     }
@@ -1103,7 +1104,7 @@ export const createElement = (meta, renderFn) => {
 
     render() {
       currentComponent.set(this);
-      const template = renderFn({
+      const template = this.renderFn({
         ...this.attrs,
         config: isBrowser ? window.props.config : global?.props?.config,
         location: isBrowser ? window.location : global?.location,
@@ -1141,14 +1142,10 @@ export const createElement = (meta, renderFn) => {
     }
   };
   const parts = meta.url.split('/');
-  const name = parts[parts.length - 1].replace('.js', '');
+  const name = parts[parts.length - 1].split('?')[0].replace('.js', '');
   registry[name] = RenderElement;
-  if (isBrowser) {
-    if (window.customElements.get(name)) {
-      return;
-    } else {
-      window.customElements.define(name, registry[name]);
-    }
+  if (isBrowser && !window.customElements.get(name)) {
+    window.customElements.define(name, registry[name]);
   }
   return renderFn;
 };

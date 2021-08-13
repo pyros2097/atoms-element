@@ -33,7 +33,7 @@ test('compileTw', () => {
   expect(compileTw('text-white font-bold border border-black p-4 m-4 w-20 h-20'.split(' '))).toMatchSnapshot();
 });
 
-test('renderHtml', async () => {
+test('renderHtml', () => {
   const age = 1;
   const data = { name: '123', address: { street: '1' } };
   const items = [1, 2, 3];
@@ -43,21 +43,21 @@ test('renderHtml', async () => {
       <app-counter name="123" class="abc ${highlight}" age=${age} details1=${data} items=${items}></app-counter>
     </div>
   `;
-  const res = await renderHtml(template);
+  const res = renderHtml(template);
   expect(res).toMatchSnapshot();
 });
 
-test('render attribute keys', async () => {
+test('render attribute keys', () => {
   const template = html`
     <div>
       <app-counter name="123" perPage="1"></app-counter>
     </div>
   `;
-  const res = await renderHtml(template);
+  const res = renderHtml(template);
   expect(res).toMatchSnapshot();
 });
 
-test('render attributes within quotes', async () => {
+test('render attributes within quotes', () => {
   const age = 1;
   const data = { name: '123', address: { street: '1' } };
   const items = [1, 2, 3];
@@ -67,24 +67,24 @@ test('render attributes within quotes', async () => {
       <app-counter name="123" class=${classes} age="${age}" details1="${data}" items="${items}"></app-counter>
     </div>
   `;
-  const res = await renderHtml(template);
+  const res = renderHtml(template);
   expect(res).toMatchSnapshot();
 });
 
-test('render unsafeHTML', async () => {
+test('render unsafeHTML', () => {
   const textContent = `<div><p class="123">this is unsafe</p></div>`;
   const template = html` <div>${unsafeHTML(textContent)}</div> `;
-  const res = await renderHtml(template);
+  const res = renderHtml(template);
   expect(res).toMatchSnapshot();
 });
 
-test('render single template', async () => {
+test('render single template', () => {
   const template = html` <div>${html`NoCountry ${false}`}</div> `;
-  const res = await renderHtml(template);
+  const res = renderHtml(template);
   expect(res).toMatchSnapshot();
 });
 
-test('render multi template', async () => {
+test('render multi template', () => {
   const template = html`
     <div>
       ${[1, 2].map(
@@ -96,7 +96,7 @@ test('render multi template', async () => {
       )}
     </div>
   `;
-  const res = await renderHtml(template);
+  const res = renderHtml(template);
   expect(res).toMatchSnapshot();
 });
 
@@ -123,7 +123,7 @@ test('createReducer', () => {
   expect(mock).toBeCalledWith({ count: 1 });
 });
 
-test('createElement without attrs', async () => {
+test('createElement without attrs', () => {
   createElement({ url: '/base-element.js' }, () => {
     return html` <div></div> `;
   });
@@ -133,7 +133,7 @@ test('createElement without attrs', async () => {
   expect(res).toMatchSnapshot();
 });
 
-test('createElement with attrs and hooks', async () => {
+test('createElement with attrs and hooks', () => {
   createElement({ url: '/base-element.js' }, ({ perPage }) => {
     const { count, actions } = useReducer({
       initial: {
