@@ -1,8 +1,5 @@
 # atoms-element
 
-[![Version](https://img.shields.io/npm/v/atoms-element?style=flat-square&color=blue)](https://www.npmjs.com/package/atoms-element)
-![Test](https://github.com/pyros2097/atoms-element/actions/workflows/main.yml/badge.svg)
-
 A simple web component library for defining your custom elements. It works on both client and server. It supports hooks and follows the same principles of react.
 Data props are attributes on the custom element by default so its easier to debug and functions/handlers are attached to the element.
 
@@ -24,12 +21,6 @@ After going through all these libraries,
 
 And figuring out how each one implemented their on custom elements I came up with atoms-element. It still doesn't have proper rehydration lit-html just replaces the DOM under the server rendered web component for now. Atomico has implemented proper SSR with hydration so I might need to look into that in the future or
 use it instead of lit-html. Since I made a few modifications like json attributes and attrTypes I don't know if it will easy.
-
-## Installation
-
-```sh
-npm i atoms-element
-```
 
 ## Example
 
